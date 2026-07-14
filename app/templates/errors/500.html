@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4"><i class="bi bi-exclamation-triangle"></i> Server Error</h1>
+    
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">500 Error</h4>
+        <p>An internal server error has occurred. Please try again later.</p>
+        <hr>
+        <p class="mb-0"><a href="{{ url_for('dashboard.index') }}" class="alert-link">Return to Dashboard</a></p>
+    </div>
+</div>
+{% endblock %}

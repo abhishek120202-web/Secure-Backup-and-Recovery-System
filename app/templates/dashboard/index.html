@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mt-4">
+    <div class="col-md-8">
+        <h1 class="mb-4">
+            <i class="bi bi-house"></i> Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- System Status Alert -->
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle"></i>
+    <strong>System Initialized!</strong> The Secure VMware Backup and Recovery System has been successfully initialized.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-cpu"></i> Virtual Machines</h5>
+                <h2 class="card-text">{{ stats.total_vms }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-box"></i> Total Backups</h5>
+                <h2 class="card-text">{{ stats.total_backups }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-check-circle"></i> Completed</h5>
+                <h2 class="card-text">{{ stats.completed_backups }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-white bg-danger">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-exclamation-triangle"></i> Failed</h5>
+                <h2 class="card-text">{{ stats.failed_backups }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Rate -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Backup Success Rate</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress" style="height: 30px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.success_rate }}%">
+                        {{ "%.1f"|format(stats.success_rate) }}%
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-hourglass-split"></i> In Progress</h5>
+            </div>
+            <div class="card-body">
+                <h3>{{ stats.in_progress_backups }} backups</h3>
+                <p class="text-muted">Currently processing...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Backups -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Backups</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Backup Name</th>
+                            <th>VM Name</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_backups %}
+                            {% for backup in recent_backups %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('backup.backup_details', backup_id=backup.id) }}">
+                                        {{ backup.backup_name }}
+                                    </a>
+                                </td>
+                                <td>{{ backup.virtual_machine.name }}</td>
+                                <td>
+                                    {% if backup.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif backup.status == 'in_progress' %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                    {% elif backup.status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ backup.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No backups yet</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> System Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Status:</strong> <span class="badge bg-success">Online</span></p>
+                <p><strong>Total Users:</strong> {{ stats.total_users }}</p>
+                <p><strong>Database:</strong> Connected</p>
+                <p><small class="text-muted">All systems operational</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-activity"></i> Recent Activity</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if recent_activity %}
+                            {% for log in recent_activity[:10] %}
+                            <tr>
+                                <td>{{ log.user.username }}</td>
+                                <td>{{ log.action }}</td>
+                                <td>
+                                    {% if log.action_status == 'success' %}
+                                        <span class="badge bg-success">Success</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No recent activity</td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

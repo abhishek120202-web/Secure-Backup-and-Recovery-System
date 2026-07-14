@@ -1,0 +1,22 @@
+# Backup
+# Recovery
+# VM files
+*.vmdk
+*.vmx
+*.vmxf
+*.vmsn
+*.vmsd
+*.nvram
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+
+# Compressed backups
+*.tar.gz
+*.tar
+*.zip
+*.rar

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4"><i class="bi bi-exclamation-circle"></i> Page Not Found</h1>
+    
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">404 Error</h4>
+        <p>The page you are looking for does not exist.</p>
+        <hr>
+        <p class="mb-0"><a href="{{ url_for('dashboard.index') }}" class="alert-link">Return to Dashboard</a></p>
+    </div>
+</div>
+{% endblock %}
