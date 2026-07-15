@@ -101,12 +101,20 @@ def register_blueprints(app: Flask) -> None:
     from app.backup.routes import backup_bp
     from app.recovery.routes import recovery_bp
     from app.audit.routes import audit_bp
+    from app.vm.routes import vm_bp
+    from app.users.routes import users_bp
+    from app.settings.routes import settings_bp
+    from app.profile.routes import profile_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(backup_bp)
     app.register_blueprint(recovery_bp)
     app.register_blueprint(audit_bp)
+    app.register_blueprint(vm_bp)
+    app.register_blueprint(users_bp)
+    app.register_blueprint(settings_bp)
+    app.register_blueprint(profile_bp)
 
 
 def setup_logging(app: Flask) -> None:

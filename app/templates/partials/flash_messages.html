@@ -1,0 +1,12 @@
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <div class="mb-6 space-y-3">
+            {% for category, message in messages %}
+                {% set tone = 'border-emerald-200 bg-emerald-50 text-emerald-700' if category == 'success' else 'border-amber-200 bg-amber-50 text-amber-700' if category == 'warning' else 'border-rose-200 bg-rose-50 text-rose-700' if category == 'danger' else 'border-sky-200 bg-sky-50 text-sky-700' %}
+                <div class="rounded-2xl border px-4 py-3 text-sm font-medium {{ tone }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endwith %}

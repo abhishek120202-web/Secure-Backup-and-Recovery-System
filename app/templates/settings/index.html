@@ -1,0 +1,30 @@
+{% extends "layout/base.html" %}
+
+{% block content %}
+<div class="mt-2 space-y-6">
+    <div>
+        <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Settings</h1>
+        <p class="mt-2 text-sm text-slate-600">Configure the backup environment and system preferences.</p>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-slate-900">Backup Defaults</h2>
+            <div class="mt-4 space-y-3 text-sm text-slate-600">
+                <p><span class="font-semibold text-slate-900">Retention:</span> 30 days</p>
+                <p><span class="font-semibold text-slate-900">Compression:</span> Enabled</p>
+                <p><span class="font-semibold text-slate-900">Encryption:</span> AES-256</p>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-slate-900">Notifications</h2>
+            <div class="mt-4 space-y-3 text-sm text-slate-600">
+                <p><span class="font-semibold text-slate-900">Email Alerts:</span> Enabled</p>
+                <p><span class="font-semibold text-slate-900">Slack:</span> Disabled</p>
+                <p><span class="font-semibold text-slate-900">Audit Logging:</span> Enabled</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

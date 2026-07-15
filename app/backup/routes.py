@@ -12,7 +12,21 @@ from app.models.audit_log import AuditLog
 backup_bp = Blueprint('backup', __name__, url_prefix='/backup')
 
 
-@backup_bp.route('/')
+@backup_bp.route('/', endpoint='index')
+@login_required
+def index():
+    """Display the backup overview page."""
+    page = request.args.get('page', 1, type=int)
+    backups = Backup.query.order_by(Backup.created_at.desc()).paginate(page=page, per_page=20)
+
+    return render_template(
+        'backup/list_backups.html',
+        title='Backups',
+        backups=backups
+    )
+
+
+@backup_bp.route('/list', endpoint='list_backups')
 @login_required
 def list_backups():
     """
@@ -51,6 +65,72 @@ def vm_backups(vm_id: int):
         vm=vm,
         backups=backups
     )
+
+
+@backup_bp.route('/create-step-1')
+@login_required
+def create_step1():
+    """Render the first step of the backup creation wizard."""
+    vms = VirtualMachine.query.order_by(VirtualMachine.created_at.desc()).all()
+    return render_template(
+        'backup/create_step1.html',
+        title='Create Backup',
+        vms=vms
+    )
+
+
+@backup_bp.route('/create-step-2')
+@login_required
+def create_step2():
+    """Render the second step of the backup creation wizard."""
+    return render_template(
+        'backup/create_step2.html',
+        title='Create Backup',
+        destinations=[{'id': 1, 'name': 'Local NAS', 'path': 'C:/Backups/NAS'}]
+    )
+
+
+@backup_bp.route('/create-step-3')
+@login_required
+def create_step3():
+    """Render the third step of the backup creation wizard."""
+    return render_template(
+        'backup/create_step3.html',
+        title='Create Backup',
+        compression_options=[{'id': 1, 'name': 'Zip', 'description': 'Standard compression'}]
+    )
+
+
+@backup_bp.route('/create-step-4')
+@login_required
+def create_step4():
+    """Render the fourth step of the backup creation wizard."""
+    return render_template(
+        'backup/create_step4.html',
+        title='Create Backup',
+        encryption_options=[{'id': 1, 'name': 'AES-256', 'description': 'Strong encryption'}]
+    )
+
+
+@backup_bp.route('/review')
+@login_required
+def review():
+    """Render the review and confirm screen for the backup wizard."""
+    return render_template(
+        'backup/review.html',
+        title='Review Backup',
+        selected_vm='Demo VM',
+        selected_destination='Local NAS',
+        selected_compression='Zip',
+        selected_encryption='AES-256'
+    )
+
+
+@backup_bp.route('/success')
+@login_required
+def success():
+    """Render the backup success confirmation screen."""
+    return render_template('backup/success.html', title='Backup Created')
 
 
 @backup_bp.route('/create/<int:vm_id>', methods=['GET', 'POST'])

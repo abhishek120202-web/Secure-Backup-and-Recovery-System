@@ -1,97 +1,74 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4">Register</h1>
-    
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-body">
-                    <form method="POST" novalidate>
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="mb-3">
-                            {{ form.username.label(class="form-label") }}
-                            {% if form.username.errors %}
-                                {{ form.username(class="form-control is-invalid") }}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.username.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                {{ form.username(class="form-control") }}
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.email.label(class="form-label") }}
-                            {% if form.email.errors %}
-                                {{ form.email(class="form-control is-invalid") }}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.email.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                {{ form.email(class="form-control") }}
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.full_name.label(class="form-label") }}
-                            {% if form.full_name.errors %}
-                                {{ form.full_name(class="form-control is-invalid") }}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.full_name.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                {{ form.full_name(class="form-control") }}
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.password.label(class="form-label") }}
-                            {% if form.password.errors %}
-                                {{ form.password(class="form-control is-invalid") }}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.password.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                {{ form.password(class="form-control") }}
-                            {% endif %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.password_confirm.label(class="form-label") }}
-                            {% if form.password_confirm.errors %}
-                                {{ form.password_confirm(class="form-control is-invalid") }}
-                                <div class="invalid-feedback d-block">
-                                    {% for error in form.password_confirm.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                {{ form.password_confirm(class="form-control") }}
-                            {% endif %}
-                        </div>
-                        
-                        <div class="d-grid">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <p class="text-center mt-3">
-                Already have an account? <a href="{{ url_for('auth.login') }}">Sign in here</a>
-            </p>
+<div class="mt-8 flex justify-center">
+    <div class="w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <div class="mb-6">
+            <h1 class="text-2xl font-semibold text-slate-900">Create an Account</h1>
+            <p class="mt-2 text-sm text-slate-600">Register to manage your backup environment.</p>
         </div>
+
+        <form method="POST" novalidate class="space-y-5">
+            {{ form.hidden_tag() }}
+
+            <div>
+                {{ form.username.label(class="block text-sm font-medium text-slate-700") }}
+                {% if form.username.errors %}
+                    {{ form.username(class="input-field input-error") }}
+                    <div class="mt-1 text-sm text-red-600">{% for error in form.username.errors %}{{ error }}{% endfor %}</div>
+                {% else %}
+                    {{ form.username(class="input-field") }}
+                {% endif %}
+            </div>
+
+            <div>
+                {{ form.email.label(class="block text-sm font-medium text-slate-700") }}
+                {% if form.email.errors %}
+                    {{ form.email(class="input-field input-error") }}
+                    <div class="mt-1 text-sm text-red-600">{% for error in form.email.errors %}{{ error }}{% endfor %}</div>
+                {% else %}
+                    {{ form.email(class="input-field") }}
+                {% endif %}
+            </div>
+
+            <div>
+                {{ form.full_name.label(class="block text-sm font-medium text-slate-700") }}
+                {% if form.full_name.errors %}
+                    {{ form.full_name(class="input-field input-error") }}
+                    <div class="mt-1 text-sm text-red-600">{% for error in form.full_name.errors %}{{ error }}{% endfor %}</div>
+                {% else %}
+                    {{ form.full_name(class="input-field") }}
+                {% endif %}
+            </div>
+
+            <div>
+                {{ form.password.label(class="block text-sm font-medium text-slate-700") }}
+                {% if form.password.errors %}
+                    {{ form.password(class="input-field input-error") }}
+                    <div class="mt-1 text-sm text-red-600">{% for error in form.password.errors %}{{ error }}{% endfor %}</div>
+                {% else %}
+                    {{ form.password(class="input-field") }}
+                {% endif %}
+            </div>
+
+            <div>
+                {{ form.password_confirm.label(class="block text-sm font-medium text-slate-700") }}
+                {% if form.password_confirm.errors %}
+                    {{ form.password_confirm(class="input-field input-error") }}
+                    <div class="mt-1 text-sm text-red-600">{% for error in form.password_confirm.errors %}{{ error }}{% endfor %}</div>
+                {% else %}
+                    {{ form.password_confirm(class="input-field") }}
+                {% endif %}
+            </div>
+
+            <div>
+                {{ form.submit(class="w-full rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700") }}
+            </div>
+        </form>
+
+        <p class="mt-6 text-center text-sm text-slate-600">
+            Already have an account? <a class="font-medium text-sky-600 hover:text-sky-700" href="{{ url_for('auth.login') }}">Sign in here</a>
+        </p>
     </div>
 </div>
 {% endblock %}

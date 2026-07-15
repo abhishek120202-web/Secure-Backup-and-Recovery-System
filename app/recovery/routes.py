@@ -34,6 +34,42 @@ def index():
     )
 
 
+@recovery_bp.route('/step-1')
+@login_required
+def step1():
+    """Render the first step of the recovery wizard."""
+    backups = Backup.query.filter_by(status='completed').order_by(Backup.created_at.desc()).all()
+    return render_template('recovery/step1.html', title='Recovery Wizard', backups=backups)
+
+
+@recovery_bp.route('/step-2')
+@login_required
+def step2():
+    """Render the second step of the recovery wizard."""
+    return render_template('recovery/step2.html', title='Recovery Wizard')
+
+
+@recovery_bp.route('/step-3')
+@login_required
+def step3():
+    """Render the third step of the recovery wizard."""
+    return render_template('recovery/step3.html', title='Recovery Wizard')
+
+
+@recovery_bp.route('/step-4')
+@login_required
+def step4():
+    """Render the fourth step of the recovery wizard."""
+    return render_template('recovery/step4.html', title='Recovery Wizard')
+
+
+@recovery_bp.route('/complete')
+@login_required
+def complete():
+    """Render the completed recovery step."""
+    return render_template('recovery/complete.html', title='Recovery Wizard')
+
+
 @recovery_bp.route('/restore/<int:backup_id>', methods=['GET', 'POST'])
 @login_required
 def restore(backup_id: int):

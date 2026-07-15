@@ -1,45 +1,38 @@
-{% extends "base.html" %}
+{% extends "layout/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <h1 class="mb-4"><i class="bi bi-exclamation-triangle"></i> System Status</h1>
-    
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-3">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Database Status</h5>
-                </div>
-                <div class="card-body">
-                    {% if system_info.database_connected %}
-                        <p><span class="badge bg-success">Connected</span></p>
-                    {% else %}
-                        <p><span class="badge bg-danger">Disconnected</span></p>
-                    {% endif %}
-                </div>
+<div class="mt-2 space-y-6">
+    <div>
+        <h1 class="text-3xl font-semibold tracking-tight text-slate-900">System Status</h1>
+        <p class="mt-2 text-sm text-slate-600">A snapshot of the current infrastructure health.</p>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-slate-900">Database Status</h2>
+            <div class="mt-4">
+                {% if system_info.database_connected %}
+                    <span class="badge-pill bg-emerald-100 text-emerald-700">Connected</span>
+                {% else %}
+                    <span class="badge-pill bg-rose-100 text-rose-700">Disconnected</span>
+                {% endif %}
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card mb-3">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">System Information</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Application Version:</strong> {{ system_info.application_version }}</p>
-                    <p><strong>Python Version:</strong> {{ system_info.python_version }}</p>
-                    <p><strong>Current Time:</strong> {{ system_info.current_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-                </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-lg font-semibold text-slate-900">System Information</h2>
+            <div class="mt-4 space-y-2 text-sm text-slate-600">
+                <p><span class="font-semibold text-slate-900">Application Version:</span> {{ system_info.application_version }}</p>
+                <p><span class="font-semibold text-slate-900">Python Version:</span> {{ system_info.python_version }}</p>
+                <p><span class="font-semibold text-slate-900">Current Time:</span> {{ system_info.current_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
             </div>
         </div>
     </div>
-    
-    <div class="card">
-        <div class="card-header bg-light">
-            <h5 class="mb-0">Statistics</h5>
-        </div>
-        <div class="card-body">
-            <p><strong>Total Users:</strong> {{ system_info.total_users }}</p>
-            <p><strong>Total Virtual Machines:</strong> {{ system_info.total_vms }}</p>
+
+    <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900">Statistics</h2>
+        <div class="mt-4 space-y-2 text-sm text-slate-600">
+            <p><span class="font-semibold text-slate-900">Total Users:</span> {{ system_info.total_users }}</p>
+            <p><span class="font-semibold text-slate-900">Total Virtual Machines:</span> {{ system_info.total_vms }}</p>
         </div>
     </div>
 </div>

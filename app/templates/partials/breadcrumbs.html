@@ -1,0 +1,12 @@
+{% if breadcrumbs %}
+    <nav class="mb-6 flex items-center gap-2 text-sm text-slate-500">
+        {% for label, url in breadcrumbs %}
+            {% if not loop.last %}
+                <a href="{{ url }}" class="font-medium text-slate-600 hover:text-slate-900">{{ label }}</a>
+                <span>/</span>
+            {% else %}
+                <span class="font-medium text-slate-900">{{ label }}</span>
+            {% endif %}
+        {% endfor %}
+    </nav>
+{% endif %}

@@ -1,0 +1,42 @@
+<aside class="hidden w-72 shrink-0 border-r border-slate-200 bg-slate-950 text-slate-200 lg:flex lg:flex-col">
+    <div class="border-b border-slate-800 px-6 py-6">
+        <div class="flex items-center gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-600/20 text-sky-400">
+                <i class="bi bi-shield-check text-xl"></i>
+            </div>
+            <div>
+                <p class="text-lg font-semibold text-white">Secure Backup</p>
+                <p class="text-sm text-slate-400">Recovery System</p>
+            </div>
+        </div>
+    </div>
+
+    <nav class="flex-1 space-y-1 px-3 py-5">
+        {% set nav_items = [
+            ('Dashboard', 'dashboard.index', 'bi-house-door'),
+            ('Virtual Machines', 'vm.index', 'bi-server'),
+            ('Backup Management', 'backup.list_backups', 'bi-cloud-arrow-up'),
+            ('Recovery Management', 'recovery.index', 'bi-arrow-clockwise'),
+            ('Audit Logs', 'audit.list_logs', 'bi-journal-text'),
+            ('Users', 'users.index', 'bi-people'),
+            ('Settings', 'settings.index', 'bi-gear'),
+            ('Profile', 'profile.index', 'bi-person-circle')
+        ] %}
+
+        {% for label, endpoint, icon in nav_items %}
+            {% set active = request.endpoint == endpoint %}
+            <a href="{{ url_for(endpoint) }}" class="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition {{ 'bg-sky-600/20 text-sky-300' if active else 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
+                <i class="bi {{ icon }} w-4 text-center"></i>
+                <span>{{ label }}</span>
+            </a>
+        {% endfor %}
+
+    </nav>
+
+    <div class="border-t border-slate-800 px-3 py-4">
+        <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white">
+            <i class="bi bi-box-arrow-right w-4 text-center"></i>
+            <span>Logout</span>
+        </a>
+    </div>
+</aside>
