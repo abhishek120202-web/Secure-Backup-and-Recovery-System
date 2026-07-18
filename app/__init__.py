@@ -14,10 +14,37 @@ from logging.handlers import RotatingFileHandler
 import os
 from flask import Flask
 from flask_login import LoginManager
-from flask_migrate import Migrate
+
+try:
+    from flask_migrate import Migrate
+except Exception:
+    Migrate = None
 
 from app.config import get_config
 from app.models import db
+
+
+def initialize_development_database(app: Flask) -> None:
+    """Create development database tables and seed a default admin user if needed."""
+    try:
+        with app.app_context():
+            db.create_all()
+
+            from app.models.user import User
+
+            if not User.query.filter_by(username='admin').first():
+                admin = User(
+                    username='admin',
+                    email='admin@example.com',
+                    full_name='System Administrator',
+                    role='admin',
+                    is_active=True,
+                )
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+    except Exception as exc:
+        app.logger.warning(f'Development database initialization skipped: {exc}')
 
 
 def create_app(config_name: str = None) -> Flask:
@@ -48,6 +75,10 @@ def create_app(config_name: str = None) -> Flask:
     
     # Initialize Flask extensions
     db.init_app(app)
+
+    # Automatically create development database tables if needed
+    if app.config['DEBUG'] and not app.config['TESTING']:
+        initialize_development_database(app)
     
     # Initialize Flask-Login
     login_manager = LoginManager()
@@ -63,8 +94,12 @@ def create_app(config_name: str = None) -> Flask:
         from app.models.user import User
         return User.query.get(int(user_id))
     
-    # Initialize Flask-Migrate
-    migrate = Migrate(app, db)
+    # Initialize Flask-Migrate when available
+    if Migrate is not None:
+        try:
+            Migrate(app, db)
+        except Exception as exc:
+            app.logger.warning(f'Flask-Migrate initialization skipped: {exc}')
     
     # Register blueprints
     register_blueprints(app)

@@ -78,8 +78,12 @@ class DevelopmentConfig(Config):
     SESSION_COOKIE_SECURE = False
     REMEMBER_COOKIE_SECURE = False
     
-    # Database - handle SQLite paths specially
-    _dev_db_url = os.getenv('DEV_DATABASE_URL', 'mysql+pymysql://root:password@localhost:3306/secure_backup_dev')
+    # Database - default to local SQLite unless DEV_DATABASE_URL is provided
+    _dev_db_url = os.getenv('DEV_DATABASE_URL')
+    if not _dev_db_url:
+        db_file = INSTANCE_PATH / 'dev.db'
+        _dev_db_url = f'sqlite:///{db_file}'
+
     if 'sqlite' in _dev_db_url:
         # For SQLite, construct proper absolute path
         db_file = INSTANCE_PATH / 'dev.db'

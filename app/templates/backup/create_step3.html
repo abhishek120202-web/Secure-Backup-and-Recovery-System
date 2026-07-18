@@ -1,5 +1,126 @@
 {% extends "layout/base.html" %}
 
+{% block content %}
+<main class="ml-nav_width min-h-[calc(100vh-64px)] p-lg max-w-container_max mx-auto">
+  <div class="mb-xl">
+    <div class="flex items-center justify-between max-w-4xl mx-auto mb-lg">
+      <div class="flex flex-col items-start">
+        <h1 class="font-display-lg text-display-lg text-on-surface mb-sm">Backup Wizard</h1>
+        <p class="text-secondary font-body-md">Compression and deduplication settings for this backup.</p>
+      </div>
+    </div>
+  </div>
+
+  <form method="post" class="max-w-5xl mx-auto">
+    <div class="grid grid-cols-12 gap-lg">
+      <div class="col-span-12 lg:col-span-8 space-y-lg">
+        <section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+          <div class="mb-lg">
+            <h2 class="font-headline-md text-headline-md text-primary mb-xs">Compression Strategy</h2>
+            <p class="text-body-md text-secondary">Select the balance between data footprint reduction and backup performance.</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+            {% set selected = session.get('backup_job', {}).get('compression', 'standard') %}
+            <label class="relative flex flex-col p-lg border-2 rounded-xl cursor-pointer {% if selected=='none' %}border-primary bg-primary-container/5{% else %}border-outline-variant{% endif %}">
+              <input type="radio" name="compression" value="none" class="sr-only" {% if selected=='none' %}checked{% endif %}>
+              <div class="flex justify-between items-start mb-md">
+                <span class="material-symbols-outlined text-secondary">timer</span>
+                <div class="w-5 h-5 border-2 rounded-full flex items-center justify-center">
+                  <div class="w-2.5 h-2.5 bg-primary hidden"></div>
+                </div>
+              </div>
+              <h3 class="font-title-lg">None</h3>
+              <p class="text-body-sm text-secondary">Zero CPU overhead. Full speed. Max storage usage.</p>
+            </label>
+
+            <label class="relative flex flex-col p-lg border-2 rounded-xl cursor-pointer {% if selected=='standard' %}border-primary bg-primary-container/5{% else %}border-outline-variant{% endif %}">
+              <input type="radio" name="compression" value="standard" class="sr-only" {% if selected=='standard' %}checked{% endif %}>
+              <div class="flex justify-between items-start mb-md">
+                <span class="material-symbols-outlined text-secondary">balance</span>
+                <div class="w-5 h-5 border-2 rounded-full flex items-center justify-center">
+                  <div class="w-2.5 h-2.5 bg-primary hidden"></div>
+                </div>
+              </div>
+              <h3 class="font-title-lg">Standard</h3>
+              <p class="text-body-sm text-secondary">Optimal balance for 80% of enterprise workloads.</p>
+            </label>
+
+            <label class="relative flex flex-col p-lg border-2 rounded-xl cursor-pointer {% if selected=='high' %}border-primary bg-primary-container/5{% else %}border-outline-variant{% endif %}">
+              <input type="radio" name="compression" value="high" class="sr-only" {% if selected=='high' %}checked{% endif %}>
+              <div class="flex justify-between items-start mb-md">
+                <span class="material-symbols-outlined text-secondary">speed</span>
+                <div class="w-5 h-5 border-2 rounded-full flex items-center justify-center">
+                  <div class="w-2.5 h-2.5 bg-primary hidden"></div>
+                </div>
+              </div>
+              <h3 class="font-title-lg">High</h3>
+              <p class="text-body-sm text-secondary">CPU Intensive. Maximum savings on storage costs.</p>
+            </label>
+          </div>
+        </section>
+
+        <section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+          <div class="flex items-center justify-between">
+            <div class="flex gap-lg items-start">
+              <div class="mt-1 w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined">join_inner</span>
+              </div>
+              <div>
+                <h3 class="font-title-lg text-on-surface">Global Deduplication</h3>
+                <p class="text-body-md text-secondary mt-xs max-w-md">Eliminate redundant data blocks across the entire backup repository. Dramatically reduces data growth at the expense of memory usage during ingestion.</p>
+              </div>
+            </div>
+            {% set dedup = session.get('backup_job', {}).get('deduplication', True) %}
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" name="deduplication" class="sr-only" {% if dedup %}checked{% endif %}>
+              <div class="w-14 h-7 bg-surface-variant rounded-full relative after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border after:rounded-full after:h-6 after:w-6 after:transition-all"></div>
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <div class="col-span-12 lg:col-span-4 space-y-lg">
+        <div class="bg-primary text-on-primary rounded-xl p-xl shadow-xl">
+          <h3 class="font-headline-sm">Resource Forecast</h3>
+          <div class="mt-lg">
+            <div class="flex justify-between items-end mb-sm">
+              <span class="text-label-md uppercase tracking-wider opacity-80">Estimated Savings</span>
+              <span class="font-display-lg text-display-lg">~42%</span>
+            </div>
+            <div class="w-full h-2 bg-on-primary/20 rounded-full overflow-hidden">
+              <div class="bg-on-primary h-full rounded-full" style="width: 42%;"></div>
+            </div>
+            <p class="text-body-sm mt-sm opacity-80">Based on standard VM metadata and deduplication rates.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-5xl mx-auto mt-xl pt-lg border-t border-outline-variant flex justify-between items-center">
+      <a href="{{ url_for('backup.create_step2') }}" class="px-xl py-md text-primary font-bold flex items-center gap-sm"><span class="material-symbols-outlined">arrow_back</span>Previous Step</a>
+      <div class="flex gap-md">
+        <button type="submit" class="px-xl py-md bg-primary text-on-primary font-bold rounded-lg flex items-center gap-sm">Continue to Security <span class="material-symbols-outlined">arrow_forward</span></button>
+      </div>
+    </div>
+  </form>
+</main>
+
+<script>
+  // update forecast visuals when compression changes (simple example)
+  document.querySelectorAll('input[name="compression"]').forEach(r => r.addEventListener('change', (e) => {
+    const map = { none: '0%', standard: '42%', high: '68%'};
+    const pct = map[e.target.value] || '42%';
+    const bar = document.querySelector('.bg-on-primary.h-full');
+    if (bar) bar.style.width = pct;
+    const text = document.querySelector('.text-display-lg');
+    if (text) text.textContent = `~${pct}`;
+  }));
+</script>
+
+{% endblock %}
+{% extends "layout/base.html" %}
+
 {% set breadcrumbs = [('Dashboard', url_for('dashboard.index')), ('Backup Management', url_for('backup.index')), ('Create Backup', None)] %}
 
 {% block content %}

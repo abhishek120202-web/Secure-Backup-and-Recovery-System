@@ -29,6 +29,11 @@ class UiRouteRegistrationTestCase(unittest.TestCase):
         response = self.client.get('/dashboard')
         self.assertEqual(response.status_code, 302)
 
+    def test_development_app_factory_initializes_database(self):
+        app = create_app('development')
+        self.assertTrue(app is not None)
+        self.assertTrue(app.config['DEBUG'])
+
 
 if __name__ == '__main__':
     unittest.main()

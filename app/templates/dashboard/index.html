@@ -1,132 +1,244 @@
 {% extends "layout/base.html" %}
 
+{% block title %}Dashboard - VMware Recovery{% endblock %}
+
 {% block content %}
-<div class="mt-2 space-y-6">
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-            <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Dashboard</h1>
-            <p class="text-sm text-slate-600">Monitor the health and activity of your backup environment.</p>
+<div class="space-y-6">
+    <div class="overflow-x-auto -mx-4 px-4">
+        <div class="flex flex-nowrap gap-4 py-2">
+        <div class="glass-card p-6 rounded-3xl soft-shadow flex flex-col justify-between min-w-[200px]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="material-symbols-outlined rounded-2xl bg-sky-100 p-2 text-sky-600">dns</span>
+                <span class="text-sm font-bold text-sky-700">+2%</span>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Total VMs</p>
+                <p class="mt-4 text-3xl font-semibold text-slate-900">{{ stats.total_vms }}</p>
+            </div>
         </div>
-        <div class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
-            <i class="bi bi-check-circle"></i> System initialized
+        
+        <div class="glass-card p-6 rounded-3xl soft-shadow flex flex-col justify-between min-w-[200px]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="material-symbols-outlined rounded-2xl bg-amber-100 p-2 text-amber-700">cloud_done</span>
+                <span class="text-sm font-bold text-amber-700">{{ '%.1f%%'|format(stats.success_rate) if stats.success_rate is not none else '99.8%' }}</span>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Backups</p>
+                <p class="mt-4 text-3xl font-semibold text-slate-900">{{ stats.total_backups }}</p>
+            </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-3xl soft-shadow flex flex-col justify-between min-w-[200px]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="material-symbols-outlined rounded-2xl bg-emerald-100 p-2 text-emerald-700">verified</span>
+                <span class="text-sm font-bold text-emerald-700">Optimal</span>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Success Rate</p>
+                <p class="mt-4 text-3xl font-semibold text-slate-900">{{ '%.1f%%'|format(stats.success_rate) if stats.success_rate is not none else '100%' }}</p>
+            </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-3xl soft-shadow flex flex-col justify-between min-w-[200px]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="material-symbols-outlined rounded-2xl bg-slate-100 p-2 text-slate-700">database</span>
+                <span class="text-sm font-bold text-slate-600">82% Full</span>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Storage</p>
+                <p class="mt-4 text-3xl font-semibold text-slate-900">1.4 PB</p>
+            </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-3xl soft-shadow flex flex-col justify-between min-w-[200px]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="material-symbols-outlined rounded-2xl bg-sky-100 p-2 text-sky-600">history</span>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Last Backup</p>
+                <p class="mt-4 text-xl font-semibold text-slate-900">12m ago</p>
+            </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-3xl soft-shadow flex flex-col justify-between min-w-[200px]">
+            <div class="flex items-center justify-between mb-4">
+                <span class="material-symbols-outlined rounded-2xl bg-slate-100 p-2 text-slate-700">restore</span>
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Last Recovery</p>
+                <p class="mt-4 text-xl font-semibold text-slate-900">3d 4h ago</p>
+            </div>
+        </div>
         </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {% set cards = [
-            ('Virtual Machines', stats.total_vms, 'bi-cpu', 'bg-sky-600 text-white'),
-            ('Total Backups', stats.total_backups, 'bi-box', 'bg-violet-600 text-white'),
-            ('Completed', stats.completed_backups, 'bi-check-circle', 'bg-emerald-600 text-white'),
-            ('Failed', stats.failed_backups, 'bi-exclamation-triangle', 'bg-rose-600 text-white')
-        ] %}
-        {% for title, value, icon, color in cards %}
-        <div class="rounded-2xl border border-slate-200 p-6 shadow-sm {{ color }}">
-            <div class="flex items-center justify-between">
+    <div class="grid gap-6 xl:grid-cols-12">
+        <div class="col-span-12 lg:col-span-7 glass-card p-8 rounded-3xl soft-shadow">
+            <div class="mb-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                    <p class="text-sm font-medium opacity-90">{{ title }}</p>
-                    <p class="mt-2 text-3xl font-semibold">{{ value }}</p>
+                    <h2 class="text-xl font-semibold text-slate-900">Backup Activity Over Time</h2>
+                    <p class="mt-2 text-sm text-slate-500">Hourly aggregation of backup payloads across all data centers.</p>
                 </div>
-                <div class="rounded-xl bg-white/20 p-3 text-xl">
-                    <i class="bi {{ icon }}"></i>
+                <select class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-200">
+                    <option>Last 24 Hours</option>
+                    <option>Last 7 Days</option>
+                </select>
+            </div>
+            <div class="h-64 grid grid-cols-12 gap-2 px-1">
+                {% for height in [50, 76, 62, 88, 72, 94, 68, 84, 56, 74, 92, 80] %}
+                <div class="flex items-end rounded-t-2xl bg-sky-100 transition-all duration-500 hover:bg-sky-200 chart-bar" style="height: {{ height }}%;"></div>
+                {% endfor %}
+            </div>
+            <div class="mt-4 flex items-center justify-between px-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                <span>00:00</span>
+                <span>04:00</span>
+                <span>08:00</span>
+                <span>12:00</span>
+                <span>16:00</span>
+                <span>20:00</span>
+                <span>23:59</span>
+            </div>
+        </div>
+
+        <div class="col-span-12 flex flex-col gap-6 lg:col-span-5">
+            <div class="glass-card p-8 rounded-3xl soft-shadow flex flex-col gap-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold text-slate-900">Storage Usage</h2>
+                        <p class="mt-2 text-sm text-slate-500">Total utilized space across all nodes.</p>
+                    </div>
                 </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="grid gap-6 lg:grid-cols-3">
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
-            <div class="mb-4 flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-900">Backup Success Rate</h2>
-                <span class="text-sm font-medium text-slate-500">{{ "%.1f"|format(stats.success_rate) }}%</span>
-            </div>
-            <div class="h-3 w-full overflow-hidden rounded-full bg-slate-100">
-                <div class="h-full rounded-full bg-emerald-500" style="width: {{ stats.success_rate }}%"></div>
-            </div>
-        </div>
-        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 class="text-lg font-semibold text-slate-900">In Progress</h2>
-            <p class="mt-3 text-4xl font-semibold text-slate-900">{{ stats.in_progress_backups }}</p>
-            <p class="mt-2 text-sm text-slate-600">Backups currently processing.</p>
-        </div>
-    </div>
-
-    <div class="grid gap-6 xl:grid-cols-[2fr_1fr]">
-        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div class="border-b border-slate-200 px-6 py-4">
-                <h2 class="text-lg font-semibold text-slate-900">Recent Backups</h2>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead class="bg-slate-50 text-left text-slate-600">
-                        <tr>
-                            <th class="px-6 py-3 font-medium">Backup Name</th>
-                            <th class="px-6 py-3 font-medium">VM Name</th>
-                            <th class="px-6 py-3 font-medium">Status</th>
-                            <th class="px-6 py-3 font-medium">Created</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100 bg-white">
-                        {% if recent_backups %}
-                            {% for backup in recent_backups %}
-                            <tr class="hover:bg-slate-50">
-                                <td class="px-6 py-4"><a class="font-medium text-sky-600 hover:text-sky-700" href="{{ url_for('backup.backup_details', backup_id=backup.id) }}">{{ backup.backup_name }}</a></td>
-                                <td class="px-6 py-4 text-slate-600">{{ backup.virtual_machine.name }}</td>
-                                <td class="px-6 py-4">
-                                    {% if backup.status == 'completed' %}
-                                        <span class="badge-pill bg-emerald-100 text-emerald-700">Completed</span>
-                                    {% elif backup.status == 'in_progress' %}
-                                        <span class="badge-pill bg-amber-100 text-amber-700">In Progress</span>
-                                    {% elif backup.status == 'failed' %}
-                                        <span class="badge-pill bg-rose-100 text-rose-700">Failed</span>
-                                    {% endif %}
-                                </td>
-                                <td class="px-6 py-4 text-slate-600">{{ backup.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                            </tr>
-                            {% endfor %}
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-slate-500">No backups yet.</td>
-                        </tr>
-                        {% endif %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="space-y-6">
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 class="text-lg font-semibold text-slate-900">System Information</h2>
-                <div class="mt-4 space-y-3 text-sm text-slate-600">
-                    <p><span class="font-semibold text-slate-900">Status:</span> <span class="badge-pill bg-emerald-100 text-emerald-700">Online</span></p>
-                    <p><span class="font-semibold text-slate-900">Total Users:</span> {{ stats.total_users }}</p>
-                    <p><span class="font-semibold text-slate-900">Database:</span> Connected</p>
-                    <p class="text-slate-500">All systems operational.</p>
+                <div class="relative mx-auto flex h-40 w-40 items-center justify-center">
+                    <svg class="h-full w-full -rotate-90" viewBox="0 0 128 128" fill="none">
+                        <circle cx="64" cy="64" r="56" stroke="#E2E8F0" stroke-width="12"/>
+                        <circle cx="64" cy="64" r="56" stroke="#0EA5E9" stroke-width="12" stroke-dasharray="351.85" stroke-dashoffset="63.33" stroke-linecap="round"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="text-3xl font-semibold text-slate-900">82%</span>
+                    </div>
+                </div>
+                <div class="space-y-3 text-sm text-slate-600">
+                    <div class="flex items-center gap-3">
+                        <span class="h-3 w-3 rounded-full bg-sky-600"></span>
+                        <span class="font-semibold text-slate-900">1.4 PB Used</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="h-3 w-3 rounded-full bg-slate-300"></span>
+                        <span>0.3 PB Available</span>
+                    </div>
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 class="text-lg font-semibold text-slate-900">Recent Activity</h2>
-                <div class="mt-4 space-y-3 text-sm">
-                    {% if recent_activity %}
-                        {% for log in recent_activity[:5] %}
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                            <div class="flex items-center justify-between gap-2">
-                                <p class="font-medium text-slate-900">{{ log.user.username }}</p>
-                                {% if log.action_status == 'success' %}
-                                    <span class="badge-pill bg-emerald-100 text-emerald-700">Success</span>
-                                {% else %}
-                                    <span class="badge-pill bg-amber-100 text-amber-700">Failed</span>
-                                {% endif %}
-                            </div>
-                            <p class="mt-1 text-slate-600">{{ log.action }}</p>
-                            <p class="mt-2 text-xs text-slate-500">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+            <div class="glass-card p-8 rounded-3xl soft-shadow">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-slate-900">Recovery Rate</h2>
+                    <span class="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-700">Excellent</span>
+                </div>
+                <div class="mt-6 space-y-4">
+                    <div>
+                        <div class="flex justify-between text-sm text-slate-500 mb-2">
+                            <span>Mission Critical VMs</span>
+                            <span class="font-semibold text-slate-900">100%</span>
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="text-slate-500">No recent activity.</p>
-                    {% endif %}
+                        <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div class="h-full rounded-full bg-sky-600" style="width:100%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex justify-between text-sm text-slate-500 mb-2">
+                            <span>Standard Workloads</span>
+                            <span class="font-semibold text-slate-900">99.4%</span>
+                        </div>
+                        <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div class="h-full rounded-full bg-sky-600" style="width:99.4%"></div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card rounded-3xl soft-shadow overflow-hidden">
+        <div class="flex flex-col gap-4 border-b border-slate-200 bg-slate-100 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <h2 class="text-xl font-semibold text-slate-900">Recent Activities</h2>
+            <button class="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-50">
+                View All Logs
+                <span class="material-symbols-outlined text-base">open_in_new</span>
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead class="bg-slate-50 text-slate-500 uppercase tracking-[0.08em] text-xs">
+                    <tr>
+                        <th class="px-6 py-4 font-semibold">Entity Name</th>
+                        <th class="px-6 py-4 font-semibold">Action Type</th>
+                        <th class="px-6 py-4 font-semibold">Initiated By</th>
+                        <th class="px-6 py-4 font-semibold">Status</th>
+                        <th class="px-6 py-4 text-right font-semibold">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white text-slate-700">
+                    {% for entry in recent_activity %}
+                    <tr class="border-t border-slate-200 hover:bg-slate-50 transition-colors">
+                        <td class="px-6 py-4 font-semibold text-slate-900">{{ entry.vm_id and ('VM-' ~ entry.vm_id) or (entry.details and entry.details.split('\n')[0] ) or 'System' }}</td>
+                        <td class="px-6 py-4 flex items-center gap-2 text-slate-600">
+                            {% set action = entry.action.lower() %}
+                            {% if 'backup' in action %}
+                                <span class="material-symbols-outlined text-base text-sky-600">backup</span>
+                            {% elif 'recover' in action or 'restore' in action %}
+                                <span class="material-symbols-outlined text-base text-amber-600">settings_backup_restore</span>
+                            {% elif 'sync' in action %}
+                                <span class="material-symbols-outlined text-base text-sky-600">cloud_sync</span>
+                            {% elif 'integrity' in action or 'check' in action %}
+                                <span class="material-symbols-outlined text-base text-rose-600">report_problem</span>
+                            {% else %}
+                                <span class="material-symbols-outlined text-base text-slate-600">bolt</span>
+                            {% endif %}
+                            {{ entry.action.replace('_', ' ').title() }}
+                        </td>
+                        <td class="px-6 py-4 text-slate-500">{{ entry.user.full_name if entry.user and entry.user.full_name else (entry.user.username if entry.user else 'System') }}</td>
+                        <td class="px-6 py-4">
+                            {% if entry.action_status == 'success' %}
+                                <span class="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-emerald-700"></span>
+                                    Success
+                                </span>
+                            {% elif entry.action_status == 'in_progress' or entry.action_status == 'running' %}
+                                <span class="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-amber-700 animate-pulse"></span>
+                                    In Progress
+                                </span>
+                            {% elif entry.action_status == 'warning' %}
+                                <span class="inline-flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                                    <span class="h-2.5 w-2.5 rounded-full bg-rose-700"></span>
+                                    Warning
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                    {{ entry.action_status.title() }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-right text-slate-500">{{ entry.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr class="border-t border-slate-200">
+                        <td class="px-6 py-4 text-slate-500" colspan="5">No recent activity available.</td>
+                    </tr>
+                    {% endfor %}
+            </table>
+        </div>
+
+        <div class="flex items-center justify-between border-t border-slate-200 bg-slate-100 px-6 py-4 text-sm text-slate-500">
+            <p>Showing {{ recent_activity|length }} of {{ total_activities }} activities</p>
+            <div class="flex gap-2">
+                <button class="rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button class="rounded-2xl border border-slate-200 bg-white p-2 text-slate-600 transition hover:bg-slate-50">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
             </div>
         </div>
     </div>

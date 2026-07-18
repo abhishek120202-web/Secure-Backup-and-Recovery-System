@@ -17,6 +17,47 @@ document.addEventListener('DOMContentLoaded', function() {
             bsAlert.close();
         }, 5000);
     });
+
+    // Mobile sidebar toggle
+    const sidebar = document.getElementById('main-sidebar');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarClose = document.getElementById('sidebar-close');
+    let sidebarBackdrop = null;
+
+    function createBackdrop() {
+        if (sidebarBackdrop) return;
+        sidebarBackdrop = document.createElement('div');
+        sidebarBackdrop.id = 'sidebar-backdrop';
+        sidebarBackdrop.className = 'fixed inset-0 z-30 bg-black/40 lg:hidden';
+        sidebarBackdrop.addEventListener('click', closeSidebar);
+        document.body.appendChild(sidebarBackdrop);
+    }
+
+    function removeBackdrop() {
+        if (!sidebarBackdrop) return;
+        sidebarBackdrop.remove();
+        sidebarBackdrop = null;
+    }
+
+    function openSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.remove('-translate-x-full');
+        sidebar.classList.add('translate-x-0');
+        createBackdrop();
+    }
+
+    function closeSidebar() {
+        if (!sidebar) return;
+        sidebar.classList.add('-translate-x-full');
+        sidebar.classList.remove('translate-x-0');
+        removeBackdrop();
+    }
+
+    sidebarToggle?.addEventListener('click', openSidebar);
+    sidebarClose?.addEventListener('click', closeSidebar);
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeSidebar();
+    });
 });
 
 /**

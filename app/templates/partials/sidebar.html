@@ -1,41 +1,53 @@
-<aside class="hidden w-72 shrink-0 border-r border-slate-200 bg-slate-950 text-slate-200 lg:flex lg:flex-col">
+<aside id="main-sidebar" class="fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full transition-transform duration-200 lg:translate-x-0 lg:static lg:inset-auto lg:z-0 lg:flex lg:flex-col border-r border-slate-200 bg-slate-950 text-slate-100">
     <div class="border-b border-slate-800 px-6 py-6">
         <div class="flex items-center gap-3">
             <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-600/20 text-sky-400">
-                <i class="bi bi-shield-check text-xl"></i>
+                <span class="material-symbols-outlined text-xl">shield</span>
             </div>
             <div>
-                <p class="text-lg font-semibold text-white">Secure Backup</p>
-                <p class="text-sm text-slate-400">Recovery System</p>
+                <p class="text-lg font-semibold text-white">VMware Recovery</p>
+                <p class="text-sm text-slate-400">Enterprise Console</p>
             </div>
         </div>
+        <button id="sidebar-close" class="lg:hidden ml-auto inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-transparent text-slate-200 hover:bg-slate-800" aria-label="Close sidebar">
+            <span class="material-symbols-outlined">close</span>
+        </button>
     </div>
 
     <nav class="flex-1 space-y-1 px-3 py-5">
         {% set nav_items = [
-            ('Dashboard', 'dashboard.index', 'bi-house-door'),
-            ('Virtual Machines', 'vm.index', 'bi-server'),
-            ('Backup Management', 'backup.list_backups', 'bi-cloud-arrow-up'),
-            ('Recovery Management', 'recovery.index', 'bi-arrow-clockwise'),
-            ('Audit Logs', 'audit.list_logs', 'bi-journal-text'),
-            ('Users', 'users.index', 'bi-people'),
-            ('Settings', 'settings.index', 'bi-gear'),
-            ('Profile', 'profile.index', 'bi-person-circle')
+            ('Dashboard', 'dashboard.index', 'dashboard'),
+            ('Virtual Machines', 'vm.index', 'computer'),
+            ('Backups', 'backup.index', 'backup'),
+            ('Recovery', 'recovery.index', 'settings_backup_restore'),
+            ('Audit Logs', 'audit.list_logs', 'assignment'),
+            ('Users', 'users.index', 'group'),
+            ('Settings', 'settings.index', 'settings'),
+            ('Profile', 'profile.index', 'account_circle')
         ] %}
 
         {% for label, endpoint, icon in nav_items %}
             {% set active = request.endpoint == endpoint %}
-            <a href="{{ url_for(endpoint) }}" class="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition {{ 'bg-sky-600/20 text-sky-300' if active else 'text-slate-300 hover:bg-slate-900 hover:text-white' }}">
-                <i class="bi {{ icon }} w-4 text-center"></i>
+            <a href="{{ url_for(endpoint) }}" {% if active %}aria-current="page"{% endif %} class="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition {{ 'bg-slate-800 text-white' if active else 'text-white hover:bg-slate-800 hover:text-white' }}">
+                <span class="material-symbols-outlined text-base">{{ icon }}</span>
                 <span>{{ label }}</span>
             </a>
         {% endfor %}
-
     </nav>
 
     <div class="border-t border-slate-800 px-3 py-4">
+        <div class="mb-4 flex items-center gap-3 rounded-2xl bg-slate-900/80 p-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-600 text-white">
+                <span class="material-symbols-outlined text-lg">corporate_fare</span>
+            </div>
+            <div>
+                <p class="text-sm font-semibold text-white">Main Org</p>
+                <p class="text-xs text-slate-400">Premium Tier</p>
+            </div>
+        </div>
+
         <a href="{{ url_for('auth.logout') }}" class="flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-300 transition hover:bg-slate-900 hover:text-white">
-            <i class="bi bi-box-arrow-right w-4 text-center"></i>
+            <span class="material-symbols-outlined text-base">logout</span>
             <span>Logout</span>
         </a>
     </div>

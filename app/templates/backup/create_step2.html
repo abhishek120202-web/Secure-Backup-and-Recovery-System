@@ -1,5 +1,168 @@
 {% extends "layout/base.html" %}
 
+{% block content %}
+<main class="max-w-[1000px] mx-auto py-xl px-lg">
+    <!-- Wizard Header & Stepper -->
+    <div class="mb-xl text-center">
+        <h1 class="font-display-lg text-display-lg text-on-surface mb-sm">Backup Wizard</h1>
+        <p class="text-secondary font-body-md">Configure a new recovery point for your enterprise infrastructure.</p>
+    </div>
+
+    <!-- Stepper -->
+    <div class="relative flex justify-between items-center mb-xl stepper-line">
+        <div class="relative z-10 flex flex-col items-center group">
+            <div class="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center shadow-sm">
+                <span class="material-symbols-outlined">check</span>
+            </div>
+            <span class="mt-xs font-label-md text-label-md text-secondary">General</span>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center">
+            <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center ring-4 ring-primary-container/30 shadow-md">
+                <span class="font-bold">2</span>
+            </div>
+            <span class="mt-xs font-label-md text-label-md text-primary">Location</span>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center">
+            <div class="w-10 h-10 rounded-full bg-surface-container-highest text-secondary flex items-center justify-center border border-outline-variant">
+                <span class="">3</span>
+            </div>
+            <span class="mt-xs font-label-md text-label-md text-secondary">Schedule</span>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center">
+            <div class="w-10 h-10 rounded-full bg-surface-container-highest text-secondary flex items-center justify-center border border-outline-variant">
+                <span class="">4</span>
+            </div>
+            <span class="mt-xs font-label-md text-label-md text-secondary">Retention</span>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center">
+            <div class="w-10 h-10 rounded-full bg-surface-container-highest text-secondary flex items-center justify-center border border-outline-variant">
+                <span class="">5</span>
+            </div>
+            <span class="mt-xs font-label-md text-label-md text-secondary">Review</span>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-xl shadow-sm">
+        <div class="mb-lg">
+            <h2 class="font-headline-md text-headline-md text-on-surface mb-xs">Choose Backup Location</h2>
+            <p class="text-secondary font-body-md">Select the target destination for your virtual machine data blocks.</p>
+        </div>
+
+        <form id="locationForm" method="post" class="space-y-xl">
+            <!-- Location Type Selection -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-md">
+                <label class="relative flex flex-col items-center p-lg border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low transition-all group" onclick="selectType('local')">
+                    <input type="radio" name="storageType" value="local" class="absolute top-4 left-4 w-4 h-4 text-primary focus:ring-primary" {% raw %}{% if session.backup_job and session.backup_job.destination and session.backup_job.destination.type == 'local' %}checked{% endif %}{% endraw %}>
+                    <span class="material-symbols-outlined text-[40px] mb-md text-secondary group-hover:text-primary transition-colors">dns</span>
+                    <span class="font-title-lg text-title-lg text-on-surface">Local Storage</span>
+                    <p class="text-body-sm text-center mt-xs text-on-surface-variant">DAS or Internal disks</p>
+                </label>
+
+                <label class="relative flex flex-col items-center p-lg border-2 border-primary bg-primary-container/5 rounded-xl cursor-pointer transition-all group" onclick="selectType('network')">
+                    <input type="radio" name="storageType" value="network" class="absolute top-4 left-4 w-4 h-4 text-primary focus:ring-primary" {% raw %}{% if session.backup_job and session.backup_job.destination and session.backup_job.destination.type == 'network' %}checked{% endif %}{% endraw %}>
+                    <span class="material-symbols-outlined text-[40px] mb-md text-primary">lan</span>
+                    <span class="font-title-lg text-title-lg text-primary">Network Share</span>
+                    <p class="text-body-sm text-center mt-xs text-primary/80">SMB / NFS Protocol</p>
+                </label>
+
+                <label class="relative flex flex-col items-center p-lg border border-outline-variant rounded-xl cursor-pointer hover:bg-surface-container-low transition-all group" onclick="selectType('cloud')">
+                    <input type="radio" name="storageType" value="cloud" class="absolute top-4 left-4 w-4 h-4 text-primary focus:ring-primary" {% raw %}{% if session.backup_job and session.backup_job.destination and session.backup_job.destination.type == 'cloud' %}checked{% endif %}{% endraw %}>
+                    <span class="material-symbols-outlined text-[40px] mb-md text-secondary group-hover:text-primary transition-colors">cloud</span>
+                    <span class="font-title-lg text-title-lg text-on-surface">Cloud Repo</span>
+                    <p class="text-body-sm text-center mt-xs text-on-surface-variant">S3 / Azure Blob</p>
+                </label>
+            </div>
+
+            <!-- Form Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-lg pt-lg border-t border-outline-variant">
+                <div class="col-span-2">
+                    <label class="block font-label-md text-label-md text-on-surface-variant mb-xs">SERVER ADDRESS / UNC PATH</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-md">folder_network</span>
+                        </span>
+                        <input type="text" name="server_address" value="{{ session.get('backup_job', {}).get('destination', {}).get('path', '\\fs-cluster-01\\backups\\recovery_points') }}" class="w-full pl-10 pr-md py-md border border-outline rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 text-body-md font-code-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-label-md text-label-md text-on-surface-variant mb-xs">USERNAME</label>
+                    <input type="text" name="username" placeholder="e.g. DOMAIN\\svc-backup" value="{{ session.get('backup_job', {}).get('destination', {}).get('username', '') }}" class="w-full px-md py-md border border-outline rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 text-body-md">
+                </div>
+
+                <div>
+                    <label class="block font-label-md text-label-md text-on-surface-variant mb-xs">PASSWORD</label>
+                    <div class="relative">
+                        <input type="password" name="password" value="" class="w-full px-md py-md border border-outline rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 text-body-md">
+                        <button type="button" class="absolute inset-y-0 right-3 flex items-center text-on-surface-variant hover:text-primary">
+                            <span class="material-symbols-outlined">visibility</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Connection Testing Status -->
+            <div class="flex items-center justify-between p-md bg-surface-container-low rounded-lg border border-outline-variant">
+                <div class="flex items-center gap-sm">
+                    <div id="test-status-icon" class="w-2 h-2 rounded-full bg-secondary"></div>
+                    <span id="test-status-text" class="font-body-sm text-secondary">Awaiting connection test...</span>
+                </div>
+                <button type="button" onclick="testConnection()" class="flex items-center gap-xs text-primary font-label-md hover:underline">
+                    <span class="material-symbols-outlined text-sm">bolt</span>
+                    TEST CONNECTION
+                </button>
+            </div>
+
+            <!-- Wizard Actions -->
+            <div class="flex items-center justify-between pt-xl mt-xl border-t border-outline-variant">
+                <a href="{{ url_for('backup.create_step1') }}" class="px-xl py-md border border-outline-variant rounded-lg text-secondary font-label-md hover:bg-surface-variant/20 transition-colors flex items-center gap-sm">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                    PREVIOUS
+                </a>
+
+                <div class="flex items-center gap-md">
+                    <a href="{{ url_for('backup.index') }}" class="px-xl py-md text-secondary font-label-md hover:text-on-surface">CANCEL</a>
+                    <button type="submit" class="px-xl py-md bg-primary text-on-primary rounded-lg font-label-md hover:bg-primary-container transition-all flex items-center gap-sm shadow-md">
+                        CONTINUE
+                        <span class="material-symbols-outlined">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</main>
+
+<script>
+    function selectType(type) {
+        console.log('Selected type:', type);
+    }
+
+    function testConnection() {
+        const statusIcon = document.getElementById('test-status-icon');
+        const statusText = document.getElementById('test-status-text');
+        statusIcon.classList.remove('bg-secondary', 'bg-green-500', 'bg-error');
+        statusIcon.classList.add('animate-pulse', 'bg-primary');
+        statusText.innerText = 'Verifying credentials and permissions...';
+        statusText.classList.remove('text-secondary');
+        statusText.classList.add('text-primary');
+        setTimeout(() => {
+            statusIcon.classList.remove('animate-pulse', 'bg-primary');
+            statusIcon.classList.add('bg-green-500');
+            statusText.innerText = 'Connection successful! (Latency: 14ms)';
+            statusText.classList.remove('text-primary');
+            statusText.classList.add('text-green-700');
+        }, 1200);
+    }
+</script>
+
+{% endblock %}
+{% extends "layout/base.html" %}
+
 {% set breadcrumbs = [('Dashboard', url_for('dashboard.index')), ('Backup Management', url_for('backup.index')), ('Create Backup', None)] %}
 
 {% block content %}

@@ -38,6 +38,7 @@ def index():
     
     # Get recent activity
     recent_activity = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(10).all()
+    total_activities = AuditLog.query.count()
     
     # Calculate statistics
     stats = {
@@ -60,7 +61,8 @@ def index():
         title='Dashboard',
         stats=stats,
         recent_backups=recent_backups,
-        recent_activity=recent_activity
+        recent_activity=recent_activity,
+        total_activities=total_activities
     )
 
 

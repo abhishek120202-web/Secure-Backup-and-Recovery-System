@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template
 from flask_login import login_required
 from app.models.vm import VirtualMachine
+from app.vm.detector import detect_local_vms
 
 vm_bp = Blueprint('vm', __name__, url_prefix='/vm')
 
@@ -11,11 +12,15 @@ vm_bp = Blueprint('vm', __name__, url_prefix='/vm')
 @login_required
 def index():
     """Display the virtual machine overview page."""
-    vms = VirtualMachine.query.order_by(VirtualMachine.created_at.desc()).all()
+    # database-backed VMs
+    db_vms = VirtualMachine.query.order_by(VirtualMachine.created_at.desc()).all()
+    # best-effort local detection (VirtualBox, libvirt, Hyper-V)
+    detected = detect_local_vms()
     return render_template(
         'virtual_machines/index.html',
         title='Virtual Machines',
-        vms=vms
+        vms=db_vms,
+        detected_vms=detected,
     )
 
 

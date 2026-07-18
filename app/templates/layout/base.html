@@ -1,28 +1,40 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-50">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Secure Backup & Recovery System{% endblock %}</title>
+    <title>{% block title %}Secure VMware Backup and Recovery System{% endblock %}</title>
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
     {% block extra_css %}{% endblock %}
 </head>
-<body class="min-h-full bg-slate-50 text-slate-800">
-    <div class="flex min-h-screen bg-slate-50">
-        {% include 'partials/sidebar.html' %}
+<body class="min-h-full bg-slate-50 text-slate-900 font-sans">
+    <div class="relative min-h-screen bg-slate-50">
+        <div class="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.1),_transparent_20%)]"></div>
 
-        <div class="flex min-h-screen flex-1 flex-col">
-            {% include 'partials/navbar.html' %}
+        <div class="flex min-h-screen">
+            {% if current_user.is_authenticated %}
+                {% include 'partials/sidebar.html' %}
+            {% endif %}
 
-            <main class="flex-1 px-4 py-6 sm:px-6 lg:px-8">
-                {% include 'partials/flash_messages.html' %}
-                {% include 'partials/breadcrumbs.html' %}
-                {% block content %}{% endblock %}
-            </main>
+            <div class="flex min-h-screen flex-1 flex-col">
+                {% if current_user.is_authenticated %}
+                    {% include 'partials/navbar.html' %}
+                {% endif %}
 
-            {% include 'partials/footer.html' %}
+                <main class="flex-1 overflow-hidden px-4 py-6 sm:px-6 lg:px-8 text-slate-900">
+                    {% include 'partials/flash_messages.html' %}
+                    {% include 'partials/breadcrumbs.html' %}
+                    {% block content %}{% endblock %}
+                </main>
+
+                {% include 'partials/footer.html' %}
+            </div>
         </div>
     </div>
 
