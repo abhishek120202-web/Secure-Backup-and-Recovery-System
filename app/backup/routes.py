@@ -2,7 +2,8 @@
 Backup routes and views.
 """
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session
+import threading
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
 from flask_login import login_required, current_user
 from app.models.vm import VirtualMachine
 from typing import List, Dict
@@ -12,8 +13,25 @@ from app.models.backup import Backup
 from app.models.user import db
 from app.models.audit_log import AuditLog
 from app.vm.detector import detect_local_vms
+from app.backup.services import BackupService
 
 backup_bp = Blueprint('backup', __name__, url_prefix='/backup')
+
+
+def _get_wizard_step() -> int:
+    """Read the current backup wizard step from the session."""
+    job = session.get('backup_job', {})
+    step = job.get('current_step', 1)
+    try:
+        return int(step)
+    except (TypeError, ValueError):
+        return 1
+
+
+def _set_wizard_step(step: int) -> None:
+    """Persist the current backup wizard step in the session."""
+    session.setdefault('backup_job', {})
+    session['backup_job']['current_step'] = step
 
 
 @backup_bp.route('/', endpoint='index')
@@ -111,6 +129,7 @@ def create_step1():
         session['backup_job']['vm_ids'] = db_selected_ids
         # store detected VMs payload in session for later review (non-persistent)
         session['backup_job']['detected_vms'] = detected_selected
+        _set_wizard_step(2)
         flash(f'Selected {len(db_selected_ids) + len(detected_selected)} VM(s) for backup.', 'success')
         return redirect(url_for('backup.create_step2'))
 
@@ -122,11 +141,13 @@ def create_step1():
     except Exception:
         detected = []
 
+    _set_wizard_step(1)
     return render_template(
         'backup/create_step1.html',
         title='Create Backup',
         vms=vms,
-        detected_vms=detected
+        detected_vms=detected,
+        current_step=_get_wizard_step()
     )
 
 
@@ -154,14 +175,17 @@ def create_step2():
             # We intentionally do not echo password back into templates
         }
         # Do NOT store raw password unless explicitly required and secure.
+        _set_wizard_step(3)
         flash('Backup destination saved for this session.', 'success')
         return redirect(url_for('backup.create_step3'))
 
     # GET: render page and prefill from session if present
+    _set_wizard_step(2)
     return render_template(
         'backup/create_step2.html',
         title='Create Backup',
-        destinations=[{'id': 1, 'name': 'Local NAS', 'path': 'C:/Backups/NAS'}]
+        destinations=[{'id': 1, 'name': 'Local NAS', 'path': 'C:/Backups/NAS'}],
+        current_step=_get_wizard_step()
     )
 
 
@@ -182,18 +206,21 @@ def create_step3():
         session['backup_job']['compression'] = compression
         session['backup_job']['deduplication'] = dedup
 
+        _set_wizard_step(4)
         flash('Compression settings saved for this session.', 'success')
         return redirect(url_for('backup.create_step4'))
 
     # GET
+    _set_wizard_step(3)
     return render_template(
         'backup/create_step3.html',
         title='Create Backup',
-        compression_options=[{'id': 1, 'name': 'Zip', 'description': 'Standard compression'}]
+        compression_options=[{'id': 1, 'name': 'Zip', 'description': 'Standard compression'}],
+        current_step=_get_wizard_step()
     )
 
 
-@backup_bp.route('/create-step-4')
+@backup_bp.route('/create-step-4', methods=['GET', 'POST'])
 @login_required
 def create_step4():
     """Render and handle the fourth step (encryption) of the backup wizard.
@@ -223,13 +250,16 @@ def create_step4():
             'passphrase_set': bool(passphrase),
             'kms': bool(kms)
         }
+        _set_wizard_step(5)
         flash('Encryption settings saved for this session.', 'success')
         return redirect(url_for('backup.review'))
 
+    _set_wizard_step(4)
     return render_template(
         'backup/create_step4.html',
         title='Create Backup',
-        encryption_options=[{'id': 1, 'name': 'AES-256', 'description': 'Strong encryption'}]
+        encryption_options=[{'id': 1, 'name': 'AES-256', 'description': 'Strong encryption'}],
+        current_step=_get_wizard_step()
     )
 
 
@@ -245,13 +275,15 @@ def review():
     compression = job.get('compression') or 'Not set'
     encryption = job.get('encryption', {}).get('type') if job.get('encryption') else None
 
+    _set_wizard_step(5)
     return render_template(
         'backup/review.html',
         title='Review Backup',
         selected_vms_count=selected_count,
         selected_destination=destination,
         selected_compression=(compression if compression else 'Not set'),
-        selected_encryption=(encryption if encryption else 'Disabled')
+        selected_encryption=(encryption if encryption else 'Disabled'),
+        current_step=_get_wizard_step()
     )
 
 
@@ -260,6 +292,22 @@ def review():
 def success():
     """Render the backup success confirmation screen."""
     return render_template('backup/success.html', title='Backup Created')
+
+
+@backup_bp.route('/status/<int:backup_id>')
+@login_required
+def backup_status(backup_id: int):
+    """Return the current backup state for live UI updates."""
+    backup = Backup.query.get_or_404(backup_id)
+    return jsonify({
+        'id': backup.id,
+        'status': backup.status,
+        'progress': backup.progress,
+        'notes': backup.notes,
+        'backup_name': backup.backup_name,
+        'backup_path': backup.backup_path,
+        'completed_at': backup.completed_at.isoformat() if backup.completed_at else None,
+    })
 
 
 @backup_bp.route('/start', methods=['POST'])
@@ -280,6 +328,7 @@ def start_backup():
     destination = job.get('destination', {})
 
     created = []
+    service = BackupService()
 
     # Import detected VMs into DB if present
     for d in detected:
@@ -300,6 +349,10 @@ def start_backup():
             db.session.add(new_vm)
             db.session.flush()
             vm_ids.append(new_vm.id)
+
+    def _run_backup_worker(app, backup_id: int, backup_type: str = 'full') -> None:
+        with app.app_context():
+            BackupService().create_backup(backup_id, backup_type=backup_type)
 
     # For each vm id, create a Backup record
     for vid in vm_ids:
@@ -341,6 +394,17 @@ def start_backup():
         )
         db.session.add(audit_log)
 
+        backup.status = 'queued'
+        backup.progress = 0
+        backup.notes = 'Queued for background execution'
+        db.session.commit()
+
+        thread = threading.Thread(
+            target=_run_backup_worker,
+            args=(current_app._get_current_object(), backup.id, 'full'),
+            daemon=True,
+        )
+        thread.start()
         created.append(backup.id)
 
     db.session.commit()
@@ -357,42 +421,10 @@ def start_backup():
 @backup_bp.route('/create/<int:vm_id>', methods=['GET', 'POST'])
 @login_required
 def create_backup(vm_id: int):
-    """
-    Create a new backup for a VM.
-    
-    Args:
-        vm_id: ID of the virtual machine
-        
-    TODO: Implement backup creation form
-    TODO: Implement backup type selection (full, incremental, differential)
-    TODO: Implement backup start
-    """
+    """Backward-compatible redirect to the new backup wizard."""
     vm = VirtualMachine.query.get_or_404(vm_id)
-    
-    if request.method == 'POST':
-        # TODO: Implement backup creation logic
-        flash('Backup creation started. This is a placeholder.', 'info')
-        
-        # Log the action
-        audit_log = AuditLog(
-            user_id=current_user.id,
-            vm_id=vm.id,
-            action='BACKUP_REQUESTED',
-            action_status='success',
-            details=f'Backup requested for VM: {vm.name}',
-            ip_address=request.remote_addr,
-            user_agent=request.user_agent.string
-        )
-        db.session.add(audit_log)
-        db.session.commit()
-        
-        return redirect(url_for('backup.vm_backups', vm_id=vm.id))
-    
-    return render_template(
-        'backup/create_backup.html',
-        title=f'Create Backup for {vm.name}',
-        vm=vm
-    )
+    flash('Using the guided backup wizard.', 'info')
+    return redirect(url_for('backup.create_step1'))
 
 
 @backup_bp.route('/<int:backup_id>')

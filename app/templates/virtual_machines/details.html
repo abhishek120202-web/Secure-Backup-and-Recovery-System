@@ -10,7 +10,7 @@
                 <h1 class="text-2xl font-semibold text-slate-900">{{ vm.name if vm else 'Virtual Machine Details' }}</h1>
                 <p class="mt-1 text-sm text-slate-600">Operational details, backup history, and recovery options.</p>
             </div>
-            <a href="{{ url_for('backup.create_backup', vm_id=vm.id) if vm and vm.id else '#' }}" class="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Backup</a>
+            <a href="{{ url_for('backup.create_step1') if vm and vm.id else '#' }}" class="rounded-2xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700">Create Backup</a>
         </div>
     </div>
 

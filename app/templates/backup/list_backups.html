@@ -7,7 +7,7 @@
             <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Backup Management</h1>
             <p class="mt-2 text-sm text-slate-600">Review recent backup jobs and open the create workflow for a VM.</p>
         </div>
-        <a href="{{ url_for('dashboard.index') }}" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Create Backup</a>
+        <a href="{{ url_for('backup.create_step1') }}" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50">Create Backup</a>
     </div>
 
     <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -28,10 +28,18 @@
                 <tbody class="divide-y divide-slate-100 bg-white">
                     {% if backups and backups.items %}
                         {% for backup in backups.items %}
-                        <tr class="hover:bg-slate-50">
+                        <tr class="hover:bg-slate-50" data-backup-id="{{ backup.id }}">
                             <td class="px-4 py-4 font-medium text-slate-900">{{ backup.backup_name }}</td>
                             <td class="px-4 py-4 text-slate-600">{{ backup.virtual_machine.name }}</td>
-                            <td class="px-4 py-4"><span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ backup.status }}</span></td>
+                            <td class="px-4 py-4">
+                                <div class="flex flex-col gap-2">
+                                    <span class="status-pill rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{{ backup.status }}</span>
+                                    <div class="h-2 w-full rounded-full bg-slate-100">
+                                        <div class="progress-bar h-2 rounded-full bg-sky-600 transition-all" style="width: {{ backup.progress }}%"></div>
+                                    </div>
+                                    <span class="status-notes text-xs text-slate-500">{{ backup.notes or 'Awaiting start' }}</span>
+                                </div>
+                            </td>
                             <td class="px-4 py-4 text-slate-600">{{ backup.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         </tr>
                         {% endfor %}
@@ -45,4 +53,35 @@
         </div>
     </div>
 </div>
+<script>
+  function refreshBackupStatuses() {
+    document.querySelectorAll('tr[data-backup-id]').forEach((row) => {
+      const id = row.getAttribute('data-backup-id');
+      fetch(`/backup/status/${id}`)
+        .then((response) => response.json())
+        .then((data) => {
+          const pill = row.querySelector('.status-pill');
+          const bar = row.querySelector('.progress-bar');
+          const note = row.querySelector('.status-notes');
+          if (pill) {
+            pill.textContent = data.status;
+            pill.className = 'status-pill rounded-full px-2.5 py-1 text-xs font-semibold ' + (
+              data.status === 'completed' ? 'bg-emerald-100 text-emerald-700' :
+              data.status === 'failed' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-700'
+            );
+          }
+          if (bar) {
+            bar.style.width = `${Math.max(0, Math.min(100, data.progress || 0))}%`;
+          }
+          if (note) {
+            note.textContent = data.notes || 'Awaiting start';
+          }
+        })
+        .catch(() => {});
+    });
+  }
+
+  refreshBackupStatuses();
+  window.setInterval(refreshBackupStatuses, 2000);
+</script>
 {% endblock %}

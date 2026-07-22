@@ -38,6 +38,7 @@ class Backup(db.Model):
     file_size_bytes = db.Column(db.BigInteger, nullable=True)
     compression_ratio = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(32), default='in_progress', nullable=False, index=True)
+    progress = db.Column(db.Integer, default=0, nullable=False)
     encryption_algorithm = db.Column(db.String(64), default='AES-256', nullable=False)
     integrity_hash = db.Column(db.String(64), nullable=True)  # SHA-256 hash
     backup_type = db.Column(db.String(32), default='full', nullable=False)

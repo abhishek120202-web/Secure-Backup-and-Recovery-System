@@ -12,6 +12,7 @@ load_dotenv()
 import logging
 from logging.handlers import RotatingFileHandler
 import os
+import sqlite3
 from flask import Flask
 from flask_login import LoginManager
 
@@ -24,11 +25,37 @@ from app.config import get_config
 from app.models import db
 
 
+def ensure_database_schema(app: Flask) -> None:
+    """Ensure SQLite tables have the latest columns without breaking existing databases."""
+    try:
+        with app.app_context():
+            db.create_all()
+            if app.config.get('SQLALCHEMY_DATABASE_URI', '').startswith('sqlite'):
+                db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+                db_path = db_uri.replace('sqlite:///', '', 1)
+                if not os.path.exists(db_path):
+                    return
+
+                conn = sqlite3.connect(db_path)
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute("PRAGMA table_info(backups)")
+                    columns = {row[1] for row in cursor.fetchall()}
+                    if 'progress' not in columns:
+                        cursor.execute('ALTER TABLE backups ADD COLUMN progress INTEGER NOT NULL DEFAULT 0')
+                        conn.commit()
+                        app.logger.info('Added missing backups.progress column')
+                finally:
+                    conn.close()
+    except Exception as exc:
+        app.logger.warning(f'Database schema migration skipped: {exc}')
+
+
 def initialize_development_database(app: Flask) -> None:
     """Create development database tables and seed a default admin user if needed."""
     try:
         with app.app_context():
-            db.create_all()
+            ensure_database_schema(app)
 
             from app.models.user import User
 
@@ -76,7 +103,10 @@ def create_app(config_name: str = None) -> Flask:
     # Initialize Flask extensions
     db.init_app(app)
 
-    # Automatically create development database tables if needed
+    # Ensure the database schema matches the current models before routes run.
+    ensure_database_schema(app)
+
+    # Automatically create development database tables and seed a default admin user if needed.
     if app.config['DEBUG'] and not app.config['TESTING']:
         initialize_development_database(app)
     

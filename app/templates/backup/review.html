@@ -8,8 +8,13 @@
                 <h2 class="font-headline-md text-headline-md text-on-surface">Backup Wizard</h2>
                 <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-label-md font-bold">Step 5 of 5</span>
             </div>
-            <div class="flex items-center w-full px-sm">
-                <!-- compact stepper visuals omitted for brevity in template -->
+            <div class="mb-4 flex flex-wrap gap-2">
+                {% set step_links = [('1', 'Select VMs', url_for('backup.create_step1')), ('2', 'Location', url_for('backup.create_step2')), ('3', 'Compression', url_for('backup.create_step3')), ('4', 'Encryption', url_for('backup.create_step4')), ('5', 'Review', url_for('backup.review'))] %}
+                {% for step_number, label, href in step_links %}
+                    {% if loop.index <= 5 %}
+                        <a href="{{ href }}" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">{{ step_number }}. {{ label }}</a>
+                    {% endif %}
+                {% endfor %}
             </div>
         </div>
 
@@ -87,6 +92,7 @@
         <div class="p-lg border-t border-outline-variant flex justify-between items-center bg-surface-container-low/30">
             <a href="{{ url_for('backup.create_step4') }}" class="px-lg py-2 border border-outline-variant text-secondary rounded hover:bg-surface-container-high transition-colors flex items-center gap-sm"><span class="material-symbols-outlined">arrow_back</span>Back</a>
             <div class="flex gap-md">
+                <a href="{{ url_for('backup.create_step3') }}" class="px-lg py-2 text-secondary hover:text-on-surface transition-colors">Jump to Step 3</a>
                 <button class="px-lg py-2 text-secondary hover:text-on-surface transition-colors">Save as Draft</button>
                 <button class="px-lg py-2 text-error hover:bg-error-container/20 rounded transition-colors" id="cancel-btn">Cancel Job</button>
             </div>
@@ -98,15 +104,15 @@
     function startJob() {
         // POST to server to persist backup records and start server-side processing
         fetch("{{ url_for('backup.start_backup') }}", { method: 'POST', headers: { 'Accept': 'application/json' } })
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) {
-                    alert('Failed to start backup: ' + data.error);
-                } else {
-                    console.info('Created backups:', data.created || []);
+            .then(async (r) => {
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok || data.error) {
+                    throw new Error(data.error || 'Failed to start backup');
                 }
+                window.location.href = "{{ url_for('backup.list_backups') }}";
             }).catch(err => {
                 console.error('Start backup request failed', err);
+                alert('Failed to start backup: ' + err.message);
             });
 
         document.getElementById('start-state').classList.add('hidden');

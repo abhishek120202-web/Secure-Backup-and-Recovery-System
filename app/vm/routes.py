@@ -2,6 +2,7 @@
 
 from flask import Blueprint, render_template
 from flask_login import login_required
+from app.models import db
 from app.models.vm import VirtualMachine
 from app.vm.detector import detect_local_vms
 
@@ -16,6 +17,22 @@ def index():
     db_vms = VirtualMachine.query.order_by(VirtualMachine.created_at.desc()).all()
     # best-effort local detection (VirtualBox, libvirt, Hyper-V)
     detected = detect_local_vms()
+
+    if not db_vms and not detected:
+        demo_vm = VirtualMachine(
+            name='Demo VM',
+            vm_path='demo-vm',
+            uuid='demo-vm-001',
+            status='active',
+            memory_mb=2048,
+            cpu_cores=2,
+            disk_size_gb=40.0,
+            description='Sample VM entry for local testing and demos'
+        )
+        db.session.add(demo_vm)
+        db.session.commit()
+        db_vms = [demo_vm]
+
     return render_template(
         'virtual_machines/index.html',
         title='Virtual Machines',
