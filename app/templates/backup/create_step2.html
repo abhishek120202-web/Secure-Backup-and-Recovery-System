@@ -50,7 +50,7 @@
         <div class="grid gap-4 md:grid-cols-2">
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Server Address / Path</label>
-                <input type="text" name="server_address" value="{{ session.get('backup_job', {}).get('destination', {}).get('path', 'C:/Backups') }}" class="w-full rounded-xl border border-slate-200 px-3 py-2" />
+                <input type="text" name="server_address" value="{{ session.get('backup_job', {}).get('destination', {}).get('path', default_backup_path) }}" class="w-full rounded-xl border border-slate-200 px-3 py-2" />
             </div>
             <div>
                 <label class="block text-sm font-semibold text-slate-700 mb-2">Username</label>

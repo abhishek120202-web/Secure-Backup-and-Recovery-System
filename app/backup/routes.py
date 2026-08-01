@@ -3,17 +3,20 @@ Backup routes and views.
 """
 
 import threading
+from pathlib import Path
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, session, current_app
 from flask_login import login_required, current_user
 from app.models.vm import VirtualMachine
 from typing import List, Dict
 import os
+import base64
 from datetime import datetime
 from app.models.backup import Backup
 from app.models.user import db
 from app.models.audit_log import AuditLog
 from app.vm.detector import detect_local_vms
 from app.backup.services import BackupService
+from app.encryption.services import EncryptionService
 
 backup_bp = Blueprint('backup', __name__, url_prefix='/backup')
 
@@ -32,6 +35,21 @@ def _set_wizard_step(step: int) -> None:
     """Persist the current backup wizard step in the session."""
     session.setdefault('backup_job', {})
     session['backup_job']['current_step'] = step
+
+
+def _resolve_backup_path(path_value: str | None) -> str:
+    """Return an absolute backup path for the current app configuration."""
+    if path_value:
+        candidate = Path(path_value).expanduser()
+        if not candidate.is_absolute():
+            candidate = Path(current_app.root_path).parent / candidate
+        return str(candidate)
+
+    fallback = current_app.config.get('BACKUP_FOLDER', str(Path(current_app.root_path).parent / 'backups'))
+    candidate = Path(fallback).expanduser()
+    if not candidate.is_absolute():
+        candidate = Path(current_app.root_path).parent / candidate
+    return str(candidate)
 
 
 @backup_bp.route('/', endpoint='index')
@@ -53,10 +71,6 @@ def index():
 def list_backups():
     """
     List all backups.
-    
-    TODO: Implement backup filtering and search
-    TODO: Implement backup sorting options
-    TODO: Implement pagination
     """
     page = request.args.get('page', 1, type=int)
     backups = Backup.query.order_by(Backup.created_at.desc()).paginate(page=page, per_page=20)
@@ -167,10 +181,11 @@ def create_step2():
         # this temporary for the wizard flow. Consider encrypting or skipping.
         password = request.form.get('password')
 
+        destination_path = (server_address or '').strip() or current_app.config.get('BACKUP_FOLDER', str(Path(current_app.root_path).parent / 'backups'))
         session.setdefault('backup_job', {})
         session['backup_job']['destination'] = {
-            'type': storage_type,
-            'path': server_address,
+            'type': storage_type or 'local',
+            'path': _resolve_backup_path(destination_path),
             'username': username,
             # We intentionally do not echo password back into templates
         }
@@ -180,12 +195,17 @@ def create_step2():
         return redirect(url_for('backup.create_step3'))
 
     # GET: render page and prefill from session if present
+    job = session.get('backup_job', {})
+    destination = job.get('destination', {})
+    default_backup_path = _resolve_backup_path(destination.get('path') if isinstance(destination, dict) else None)
+
     _set_wizard_step(2)
     return render_template(
         'backup/create_step2.html',
         title='Create Backup',
-        destinations=[{'id': 1, 'name': 'Local NAS', 'path': 'C:/Backups/NAS'}],
-        current_step=_get_wizard_step()
+        destinations=[{'id': 1, 'name': 'Local Storage', 'path': default_backup_path}],
+        current_step=_get_wizard_step(),
+        default_backup_path=default_backup_path,
     )
 
 
@@ -198,7 +218,7 @@ def create_step3():
     under `backup_job` then redirect to the next step.
     """
     if request.method == 'POST':
-        compression = request.form.get('compression', 'standard')
+        compression = request.form.get('compression', current_app.config.get('BACKUP_COMPRESSION_DEFAULT', 'standard'))
         # checkbox present when checked
         dedup = 'deduplication' in request.form
 
@@ -234,6 +254,7 @@ def create_step4():
         passphrase = request.form.get('passphrase', '')
         confirm = request.form.get('confirm_passphrase', '')
         kms = 'kms_storage' in request.form
+        default_encryption = current_app.config.get('BACKUP_ENCRYPTION_DEFAULT', False)
 
         # Basic validation: if passphrase provided, ensure minimum length and match
         if passphrase:
@@ -245,11 +266,21 @@ def create_step4():
                 return render_template('backup/create_step4.html', title='Create Backup')
 
         session.setdefault('backup_job', {})
-        session['backup_job']['encryption'] = {
-            'type': 'AES-256',
-            'passphrase_set': bool(passphrase),
-            'kms': bool(kms)
-        }
+        if passphrase or default_encryption:
+            key, salt = EncryptionService().derive_key_from_password(passphrase)
+            session['backup_job']['encryption'] = {
+                'type': 'AES-256',
+                'passphrase_set': True,
+                'kms': bool(kms),
+                'key': base64.b64encode(key).decode('utf-8'),
+                'salt': base64.b64encode(salt).decode('utf-8')
+            }
+        else:
+            session['backup_job']['encryption'] = {
+                'type': 'none',
+                'passphrase_set': False,
+                'kms': bool(kms),
+            }
         _set_wizard_step(5)
         flash('Encryption settings saved for this session.', 'success')
         return redirect(url_for('backup.review'))
@@ -271,7 +302,7 @@ def review():
     vm_ids = job.get('vm_ids', [])
     detected = job.get('detected_vms', [])
     selected_count = len(vm_ids) + len(detected)
-    destination = job.get('destination', {}).get('path') or 'Not set'
+    destination = job.get('destination', {}).get('path') or current_app.config.get('BACKUP_FOLDER', 'Not set')
     compression = job.get('compression') or 'Not set'
     encryption = job.get('encryption', {}).get('type') if job.get('encryption') else None
 
@@ -328,7 +359,7 @@ def start_backup():
     destination = job.get('destination', {})
 
     created = []
-    service = BackupService()
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
 
     # Import detected VMs into DB if present
     for d in detected:
@@ -350,9 +381,14 @@ def start_backup():
             db.session.flush()
             vm_ids.append(new_vm.id)
 
-    def _run_backup_worker(app, backup_id: int, backup_type: str = 'full') -> None:
+    def _run_backup_worker(app, backup_id: int, backup_type: str = 'full', compression: str = 'standard', encryption_key: str = None) -> None:
         with app.app_context():
-            BackupService().create_backup(backup_id, backup_type=backup_type)
+            BackupService().create_backup(
+                backup_id,
+                backup_type=backup_type,
+                compression=compression,
+                encryption_key=encryption_key,
+            )
 
     # For each vm id, create a Backup record
     for vid in vm_ids:
@@ -365,16 +401,15 @@ def start_backup():
         backup_name = f"{safe_name}-{timestamp}"
 
         dest_path = destination.get('path') if isinstance(destination, dict) else None
-        if dest_path:
-            backup_file = os.path.join(dest_path, f"{backup_name}.bak")
-        else:
-            backup_file = os.path.join('backups', f"{backup_name}.bak")
+        backup_root = _resolve_backup_path(dest_path or current_app.config.get('BACKUP_FOLDER', 'backups'))
+        os.makedirs(backup_root, exist_ok=True)
+        backup_file = os.path.join(backup_root, backup_name)
 
         backup = Backup(
             vm_id=vm.id,
             backup_name=backup_name,
             backup_path=backup_file,
-            status='in_progress',
+            status='queued',
             encryption_algorithm=(job.get('encryption', {}).get('type') if job.get('encryption') else 'none'),
             backup_type='full'
         )
@@ -394,14 +429,19 @@ def start_backup():
         )
         db.session.add(audit_log)
 
-        backup.status = 'queued'
         backup.progress = 0
-        backup.notes = 'Queued for background execution'
+        backup.notes = f'Queued for background execution ({job.get("compression", "standard")} compression, {"encrypted" if job.get("encryption", {}).get("passphrase_set") else "unencrypted"})'
         db.session.commit()
+
+        encryption_key = None
+        if job.get('encryption', {}).get('passphrase_set'):
+            encryption_key = job.get('encryption', {}).get('key')
+
+        compression = job.get('compression', 'standard')
 
         thread = threading.Thread(
             target=_run_backup_worker,
-            args=(current_app._get_current_object(), backup.id, 'full'),
+            args=(current_app._get_current_object(), backup.id, 'full', compression, encryption_key),
             daemon=True,
         )
         thread.start()
@@ -414,6 +454,13 @@ def start_backup():
         session.pop('backup_job', None)
     except Exception:
         pass
+
+    if is_ajax:
+        return jsonify({'created': created}), 201
+
+    if request.args.get('redirect') == '1':
+        flash(f'Started {len(created)} backup job(s).', 'success')
+        return redirect(url_for('backup.list_backups'))
 
     return jsonify({'created': created}), 201
 
@@ -435,9 +482,6 @@ def backup_details(backup_id: int):
     
     Args:
         backup_id: ID of the backup
-        
-    TODO: Implement detailed backup information display
-    TODO: Implement backup verification status
     """
     backup = Backup.query.get_or_404(backup_id)
     
@@ -456,34 +500,38 @@ def delete_backup(backup_id: int):
     
     Args:
         backup_id: ID of the backup
-        
-    TODO: Implement secure backup deletion
-    TODO: Implement confirmation before deletion
     """
     backup = Backup.query.get_or_404(backup_id)
     
     if not current_user.is_admin():
         flash('You do not have permission to delete backups.', 'danger')
         return redirect(url_for('backup.backup_details', backup_id=backup.id))
-    
-    # TODO: Implement backup deletion
-    flash('Backup deletion is not yet implemented.', 'warning')
-    
-    # Log the action
+
+    service = BackupService()
+    success = service.delete_backup(backup.id)
+    if success:
+        flash('Backup deleted successfully.', 'success')
+        audit_status = 'success'
+        action = 'BACKUP_DELETED'
+    else:
+        flash('Failed to delete backup. Please check logs.', 'danger')
+        audit_status = 'failure'
+        action = 'BACKUP_DELETION_FAILED'
+
     audit_log = AuditLog(
         user_id=current_user.id,
         backup_id=backup.id,
         vm_id=backup.vm_id,
-        action='BACKUP_DELETION_REQUESTED',
-        action_status='success',
+        action=action,
+        action_status=audit_status,
         details=f'Deletion requested for backup: {backup.backup_name}',
         ip_address=request.remote_addr,
         user_agent=request.user_agent.string
     )
     db.session.add(audit_log)
     db.session.commit()
-    
-    return redirect(url_for('backup.backup_details', backup_id=backup.id))
+
+    return redirect(url_for('backup.list_backups'))
 
 
 @backup_bp.route('/api/backup-stats')

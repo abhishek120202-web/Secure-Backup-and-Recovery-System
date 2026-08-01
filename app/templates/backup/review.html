@@ -57,7 +57,7 @@
                         <span class="material-symbols-outlined text-display-lg" style="font-size: 48px;">rocket_launch</span>
                     </div>
                     <p class="text-body-md text-secondary mb-xl">All systems ready. Click below to begin the enterprise recovery snapshot sequence.</p>
-                    <button class="w-full bg-primary text-on-primary py-3 px-lg rounded-lg font-bold hover:bg-primary-container transition-all flex items-center justify-center gap-md" onclick="startJob()">
+                    <button id="start-backup-btn" class="w-full bg-primary text-on-primary py-3 px-lg rounded-lg font-bold hover:bg-primary-container transition-all flex items-center justify-center gap-md" onclick="startJob()">
                         <span>Start Backup Job</span>
                         <span class="material-symbols-outlined">play_arrow</span>
                     </button>
@@ -78,12 +78,16 @@
                     <div class="grid grid-cols-2 gap-md text-left bg-surface-container-lowest/50 p-md rounded-lg border border-outline-variant/30">
                         <div>
                             <span class="text-label-md text-secondary block">Transfer Speed</span>
-                            <span class="text-body-md font-bold text-on-surface" id="speed">0 MB/s</span>
+                            <span class="text-body-md font-bold text-on-surface" id="speed">Monitoring</span>
                         </div>
                         <div>
                             <span class="text-label-md text-secondary block">Time Remaining</span>
-                            <span class="text-body-md font-bold text-on-surface" id="eta">Calculating...</span>
+                            <span class="text-body-md font-bold text-on-surface" id="eta">Checking status...</span>
                         </div>
+                    </div>
+                    <div class="mt-4 text-left text-sm text-slate-600">
+                        <div class="font-semibold text-slate-700 mb-2">Progress Log</div>
+                        <div id="backup-status-summary" class="max-h-36 overflow-y-auto rounded-lg border border-slate-200 bg-white/70 p-3 whitespace-pre-line"></div>
                     </div>
                 </div>
             </div>
@@ -101,67 +105,148 @@
 </main>
 
 <script>
+    let backupStatusTimer = null;
+    let monitoredBackupIds = [];
+
+    async function fetchJson(url) {
+        try {
+            const response = await fetch(url, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            });
+            if (!response.ok) {
+                return null;
+            }
+
+            const text = await response.text();
+            if (!text) {
+                return null;
+            }
+
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                console.warn('Backup status response was not valid JSON', error);
+                return null;
+            }
+        } catch (error) {
+            console.warn('Backup status request failed', error);
+            return null;
+        }
+    }
+
+    function setStatusUI(status, progress, notes, backupName) {
+        const task = document.getElementById('task-name');
+        const fill = document.getElementById('progress-fill');
+        const perc = document.getElementById('percentage');
+        const speed = document.getElementById('speed');
+        const eta = document.getElementById('eta');
+        const summary = document.getElementById('backup-status-summary');
+
+        const safeProgress = Math.max(0, Math.min(100, Number(progress) || 0));
+        let statusText = 'Waiting for backup status...';
+
+        if (status === 'completed') {
+            statusText = 'Backup completed';
+        } else if (status === 'failed') {
+            statusText = 'Backup failed';
+        } else if (status === 'in_progress') {
+            statusText = 'Backup in progress';
+        } else if (status === 'queued') {
+            statusText = 'Backup queued';
+        }
+
+        if (task) {
+            task.textContent = backupName ? `${statusText} — ${backupName}` : statusText;
+        }
+        if (fill) {
+            fill.style.width = `${safeProgress}%`;
+            fill.classList.toggle('bg-emerald-600', status === 'completed');
+            fill.classList.toggle('bg-rose-600', status === 'failed');
+            fill.classList.remove('bg-primary');
+            if (status !== 'completed' && status !== 'failed') {
+                fill.classList.add('bg-primary');
+            }
+        }
+        if (perc) perc.textContent = `${Math.round(safeProgress)}%`;
+        if (speed) speed.textContent = status === 'completed' ? 'Complete' : status === 'failed' ? 'Failed' : 'Monitoring';
+        if (eta) eta.textContent = notes || 'Checking status...';
+        if (summary) {
+            summary.textContent = notes || (backupName ? `${backupName}: ${status}` : `Status: ${status}`);
+        }
+    }
+
+    function updateBackupStatus() {
+        if (!monitoredBackupIds.length) {
+            return;
+        }
+
+        const requests = monitoredBackupIds.map((id) => fetchJson(`/backup/status/${id}`));
+
+        Promise.all(requests).then((results) => {
+            const valid = results.filter(Boolean);
+            if (!valid.length) {
+                setStatusUI('queued', 0, 'Waiting for the backup service to report progress...', 'Backup');
+                return;
+            }
+
+            const latest = valid[0];
+            const progress = Math.max(0, Math.min(100, latest.progress || 0));
+            setStatusUI(latest.status, progress, latest.notes, latest.backup_name);
+
+            if (latest.status === 'completed' || latest.status === 'failed') {
+                if (backupStatusTimer) {
+                    clearInterval(backupStatusTimer);
+                    backupStatusTimer = null;
+                }
+            }
+        });
+    }
+
     function startJob() {
-        // POST to server to persist backup records and start server-side processing
-        fetch("{{ url_for('backup.start_backup') }}", { method: 'POST', headers: { 'Accept': 'application/json' } })
+        const startButton = document.getElementById('start-backup-btn');
+        const startState = document.getElementById('start-state');
+        const runningState = document.getElementById('running-state');
+        const cancelBtn = document.getElementById('cancel-btn');
+        if (startButton) {
+            startButton.disabled = true;
+            startButton.classList.add('opacity-70', 'cursor-not-allowed');
+        }
+        if (startState) startState.classList.add('hidden');
+        if (runningState) runningState.classList.remove('hidden');
+        if (cancelBtn) cancelBtn.textContent = 'Working...';
+        setStatusUI('queued', 0, 'Starting backup job...', 'Backup');
+
+        fetch("{{ url_for('backup.start_backup') }}", {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
             .then(async (r) => {
                 const data = await r.json().catch(() => ({}));
                 if (!r.ok || data.error) {
                     throw new Error(data.error || 'Failed to start backup');
                 }
-                window.location.href = "{{ url_for('backup.list_backups') }}";
+
+                monitoredBackupIds = Array.isArray(data.created) ? data.created : [];
+                if (backupStatusTimer) {
+                    clearInterval(backupStatusTimer);
+                }
+                if (monitoredBackupIds.length) {
+                    updateBackupStatus();
+                    backupStatusTimer = window.setInterval(updateBackupStatus, 2000);
+                }
             }).catch(err => {
                 console.error('Start backup request failed', err);
+                if (cancelBtn) cancelBtn.textContent = 'Cancel Job';
+                if (startState) startState.classList.remove('hidden');
+                if (runningState) runningState.classList.add('hidden');
+                if (startButton) {
+                    startButton.disabled = false;
+                    startButton.classList.remove('opacity-70', 'cursor-not-allowed');
+                }
                 alert('Failed to start backup: ' + err.message);
             });
-
-        document.getElementById('start-state').classList.add('hidden');
-        document.getElementById('running-state').classList.remove('hidden');
-        document.getElementById('cancel-btn').textContent = 'Stop Task';
-
-        let progress = 0;
-        const tasks = [
-            "Initializing Snapshot...",
-            "Allocating Buffer...",
-            "Compressing Data Streams...",
-            "Transferring Blocks to Repository...",
-            "Verifying Checksums...",
-            "Finalizing Encryption Keys..."
-        ];
-
-        const interval = setInterval(() => {
-            progress += Math.random() * 2.5;
-            if (progress > 100) progress = 100;
-
-            const fill = document.getElementById('progress-fill');
-            const perc = document.getElementById('percentage');
-            const speed = document.getElementById('speed');
-            const eta = document.getElementById('eta');
-            const task = document.getElementById('task-name');
-
-            fill.style.width = progress + '%';
-            perc.textContent = Math.floor(progress) + '%';
-            speed.textContent = (240 + Math.random() * 40).toFixed(1) + ' MB/s';
-            const remainingSeconds = Math.max(0, Math.floor((100 - progress) * 1.5));
-            const mins = Math.floor(remainingSeconds / 60);
-            const secs = remainingSeconds % 60;
-            eta.textContent = `${mins}m ${secs}s`;
-
-            if (progress < 15) task.textContent = tasks[0];
-            else if (progress < 25) task.textContent = tasks[1];
-            else if (progress < 35) task.textContent = tasks[2];
-            else if (progress < 85) task.textContent = tasks[3];
-            else if (progress < 95) task.textContent = tasks[4];
-            else task.textContent = tasks[5];
-
-            if (progress >= 100) {
-                clearInterval(interval);
-                task.textContent = "Backup Successfully Completed";
-                task.classList.add('text-on-secondary-fixed-variant');
-                fill.classList.remove('bg-primary');
-                fill.classList.add('bg-on-secondary-fixed-variant');
-            }
-        }, 300);
     }
 </script>
 

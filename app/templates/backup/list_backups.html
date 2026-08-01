@@ -29,7 +29,7 @@
                     {% if backups and backups.items %}
                         {% for backup in backups.items %}
                         <tr class="hover:bg-slate-50" data-backup-id="{{ backup.id }}">
-                            <td class="px-4 py-4 font-medium text-slate-900">{{ backup.backup_name }}</td>
+                            <td class="px-4 py-4 font-medium text-slate-900"><a href="{{ url_for('backup.backup_details', backup_id=backup.id) }}" class="text-slate-900 hover:text-sky-600">{{ backup.backup_name }}</a></td>
                             <td class="px-4 py-4 text-slate-600">{{ backup.virtual_machine.name }}</td>
                             <td class="px-4 py-4">
                                 <div class="flex flex-col gap-2">

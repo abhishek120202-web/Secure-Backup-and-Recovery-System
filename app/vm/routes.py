@@ -19,19 +19,25 @@ def index():
     detected = detect_local_vms()
 
     if not db_vms and not detected:
-        demo_vm = VirtualMachine(
-            name='Demo VM',
-            vm_path='demo-vm',
-            uuid='demo-vm-001',
-            status='active',
-            memory_mb=2048,
-            cpu_cores=2,
-            disk_size_gb=40.0,
-            description='Sample VM entry for local testing and demos'
-        )
-        db.session.add(demo_vm)
-        db.session.commit()
-        db_vms = [demo_vm]
+        existing = VirtualMachine.query.filter(
+            VirtualMachine.name == 'Demo VM'
+        ).first()
+        if existing is None:
+            demo_vm = VirtualMachine(
+                name='Demo VM',
+                vm_path='demo-vm',
+                uuid='demo-vm-001',
+                status='active',
+                memory_mb=2048,
+                cpu_cores=2,
+                disk_size_gb=40.0,
+                description='Sample VM entry for local testing and demos'
+            )
+            db.session.add(demo_vm)
+            db.session.commit()
+            db_vms = [demo_vm]
+        else:
+            db_vms = [existing]
 
     return render_template(
         'virtual_machines/index.html',

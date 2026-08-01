@@ -23,6 +23,7 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = False
     TESTING = False
+    WTF_CSRF_ENABLED = False
     
     # SQLAlchemy settings
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -41,8 +42,10 @@ class Config:
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
     
     # Application settings
-    BACKUP_FOLDER = os.getenv('BACKUP_FOLDER', 'backups/')
-    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads/')
+    BACKUP_FOLDER = os.getenv('BACKUP_FOLDER', str(PROJECT_ROOT / 'backups'))
+    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', str(PROJECT_ROOT / 'uploads'))
+    BACKUP_COMPRESSION_DEFAULT = os.getenv('BACKUP_COMPRESSION_DEFAULT', 'standard')
+    BACKUP_ENCRYPTION_DEFAULT = os.getenv('BACKUP_ENCRYPTION_DEFAULT', 'false').lower() in {'1', 'true', 'yes', 'on'}
     MAX_CONTENT_LENGTH = 5 * 1024 * 1024 * 1024  # 5GB max file size
     
     # Logging settings

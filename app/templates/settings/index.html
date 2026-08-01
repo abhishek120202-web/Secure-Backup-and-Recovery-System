@@ -4,16 +4,29 @@
 <div class="mt-2 space-y-6">
     <div>
         <h1 class="text-3xl font-semibold tracking-tight text-slate-900">Settings</h1>
-        <p class="mt-2 text-sm text-slate-600">Configure the backup environment and system preferences.</p>
+        <p class="mt-2 text-sm text-slate-600">Configure the backup environment and defaults for future jobs.</p>
     </div>
 
-    <div class="grid gap-6 lg:grid-cols-2">
+    <form method="post" class="grid gap-6 lg:grid-cols-2">
         <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 class="text-lg font-semibold text-slate-900">Backup Defaults</h2>
-            <div class="mt-4 space-y-3 text-sm text-slate-600">
-                <p><span class="font-semibold text-slate-900">Retention:</span> 30 days</p>
-                <p><span class="font-semibold text-slate-900">Compression:</span> Enabled</p>
-                <p><span class="font-semibold text-slate-900">Encryption:</span> AES-256</p>
+            <div class="mt-4 space-y-4 text-sm text-slate-600">
+                <div>
+                    <label class="mb-1 block font-semibold text-slate-900" for="backup_folder">Backup storage location</label>
+                    <input id="backup_folder" name="backup_folder" type="text" value="{{ backup_folder }}" class="w-full rounded-xl border border-slate-200 px-3 py-2" />
+                </div>
+                <div>
+                    <label class="mb-1 block font-semibold text-slate-900" for="compression">Default compression</label>
+                    <select id="compression" name="compression" class="w-full rounded-xl border border-slate-200 px-3 py-2">
+                        <option value="none" {% if compression == 'none' %}selected{% endif %}>None</option>
+                        <option value="standard" {% if compression == 'standard' %}selected{% endif %}>Standard</option>
+                        <option value="high" {% if compression == 'high' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input id="encryption" name="encryption" type="checkbox" {% if encryption_enabled %}checked{% endif %}>
+                    <label for="encryption" class="font-semibold text-slate-900">Enable encryption by default</label>
+                </div>
             </div>
         </div>
 
@@ -24,7 +37,8 @@
                 <p><span class="font-semibold text-slate-900">Slack:</span> Disabled</p>
                 <p><span class="font-semibold text-slate-900">Audit Logging:</span> Enabled</p>
             </div>
+            <button type="submit" class="mt-6 rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white">Save settings</button>
         </div>
-    </div>
+    </form>
 </div>
 {% endblock %}

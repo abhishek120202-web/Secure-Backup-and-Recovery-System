@@ -4,6 +4,7 @@ This module tries to discover VMs on the host by querying common hypervisors:
 - VirtualBox (VBoxManage)
 - libvirt/virsh
 - Hyper-V (PowerShell Get-VM)
+- VMware Workstation / Player (vmrun)
 
 The code is intentionally defensive: it will never raise when a command is missing
 or fails — it simply returns an empty list or the VMs it could detect.
@@ -29,13 +30,13 @@ def detect_virtualbox() -> List[Dict]:
     out = _run_cmd(["VBoxManage", "list", "vms"]) or ""
     vms: List[Dict] = []
     for line in out.splitlines():
-        # lines like: "\"name\" {uuid}"
         if not line.strip():
             continue
-        parts = line.split()
-        name = parts[0].strip('"')
+        line = line.strip()
+        if not line.startswith('"'):
+            continue
+        name = line.split('"', 2)[1]
         info = {"name": name, "hypervisor": "VirtualBox", "status": "unknown"}
-        # try to get more info
         info_out = _run_cmd(["VBoxManage", "showvminfo", name, "--machinereadable"]) or ""
         for l in info_out.splitlines():
             if "VMState=" in l:
@@ -198,6 +199,12 @@ def detect_local_vms() -> List[Dict]:
     try:
         hv = detect_hyperv()
         results.extend(hv)
+    except Exception:
+        pass
+    # VMware Workstation / Player via vmrun
+    try:
+        vmware = detect_vmrun()
+        results.extend(vmware)
     except Exception:
         pass
 

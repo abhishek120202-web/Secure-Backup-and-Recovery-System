@@ -99,6 +99,7 @@ def create_app(config_name: str = None) -> Flask:
     os.makedirs(app.config['BACKUP_FOLDER'], exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs('logs', exist_ok=True)
+    os.makedirs(app.instance_path, exist_ok=True)
     
     # Initialize Flask extensions
     db.init_app(app)
