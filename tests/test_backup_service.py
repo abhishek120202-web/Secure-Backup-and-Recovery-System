@@ -1,6 +1,7 @@
 import os
 import tempfile
 import shutil
+import zipfile
 
 from app import create_app
 from app.models import db
@@ -111,6 +112,45 @@ def test_start_backup_route_creates_backup_records(tmp_path):
             assert Backup.query.count() == 1
 
 
+def test_review_page_reflects_saved_wizard_values(tmp_path):
+    app = create_app('testing')
+    app.config['BACKUP_FOLDER'] = str(tmp_path / 'backups')
+    app.config['TESTING'] = True
+
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+
+        user = User(username='reviewer', email='reviewer@example.com', full_name='Reviewer', role='admin', is_active=True)
+        user.set_password('secret123')
+        db.session.add(user)
+
+        vm = VirtualMachine(name='Review VM', vm_path=str(tmp_path / 'review-vm'), uuid='review-vm')
+        db.session.add(vm)
+        db.session.commit()
+        user_id = user.id
+        vm_id = vm.id
+
+    with app.test_client() as client:
+        with client.session_transaction() as session:
+            session['_user_id'] = str(user_id)
+            session['backup_job'] = {
+                'vm_ids': [vm_id],
+                'detected_vms': [],
+                'destination': {'path': str(tmp_path / 'dest')},
+                'compression': 'standard',
+                'deduplication': True,
+                'encryption': {'type': 'AES-256', 'passphrase_set': False, 'kms': False},
+            }
+
+        response = client.get('/backup/review')
+        assert response.status_code == 200
+        body = response.get_data(as_text=True)
+        assert 'Review VM' in body
+        assert 'standard' in body
+        assert 'AES-256' in body
+
+
 def test_create_backup_service_accumulates_progress_notes(tmp_path):
     app = create_app('testing')
     app.config['BACKUP_FOLDER'] = str(tmp_path / 'backups')
@@ -141,6 +181,73 @@ def test_create_backup_service_accumulates_progress_notes(tmp_path):
         assert 'Queued for execution' in backup.notes
         assert 'Creating full backup' in backup.notes
         assert 'Backup completed successfully' in backup.notes
+
+
+def test_create_backup_service_handles_virtualbox_vbox_file_by_backing_up_parent_vm_folder(tmp_path):
+    app = create_app('testing')
+    app.config['BACKUP_FOLDER'] = str(tmp_path / 'backups')
+    app.config['TESTING'] = True
+
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+
+        vm_dir = tmp_path / 'VirtualBox VMs' / 'Test VM'
+        vm_dir.mkdir(parents=True)
+        (vm_dir / 'Test VM.vbox').write_text('virtualbox-config', encoding='utf-8')
+        (vm_dir / 'disk.vdi').write_text('fake-vm-disk-data', encoding='utf-8')
+
+        vm = VirtualMachine(name='VBox VM', vm_path=str(vm_dir / 'Test VM.vbox'), uuid='vbox-vm')
+        db.session.add(vm)
+        db.session.flush()
+
+        backup = Backup(vm_id=vm.id, backup_name='vbox-backup', backup_path='pending')
+        db.session.add(backup)
+        db.session.commit()
+
+        service = BackupService()
+        result = service.create_backup(backup.id, compression='standard')
+
+        assert result is True
+        backup = Backup.query.get(backup.id)
+        assert backup.status == 'completed'
+        archive_path = os.path.abspath(backup.backup_path)
+        assert os.path.exists(archive_path)
+
+        with zipfile.ZipFile(archive_path) as archive:
+            archived_names = set(archive.namelist())
+            assert 'disk.vdi' in archived_names
+
+
+def test_start_backup_route_rejects_empty_selection(tmp_path):
+    app = create_app('testing')
+    app.config['BACKUP_FOLDER'] = str(tmp_path / 'backups')
+    app.config['TESTING'] = True
+
+    with app.app_context():
+        db.drop_all()
+        db.create_all()
+
+        user = User(username='empty', email='empty@example.com', full_name='Empty', role='admin', is_active=True)
+        user.set_password('secret123')
+        db.session.add(user)
+        db.session.commit()
+        user_id = user.id
+
+    with app.test_client() as client:
+        with client.session_transaction() as session:
+            session['_user_id'] = str(user_id)
+            session['backup_job'] = {
+                'vm_ids': [],
+                'detected_vms': [],
+                'destination': {'path': str(tmp_path / 'dest')},
+                'compression': 'standard',
+                'encryption': {'type': 'AES-256', 'passphrase_set': False, 'kms': False},
+            }
+
+        response = client.post('/backup/start', data={})
+        assert response.status_code == 400
+        assert response.get_json()['error'] == 'No virtual machine selected for backup.'
 
 
 def test_create_step2_uses_configured_backup_location(tmp_path):

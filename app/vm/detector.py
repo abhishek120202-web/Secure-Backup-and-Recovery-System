@@ -13,13 +13,36 @@ from __future__ import annotations
 
 import json
 import platform
+import shutil
 import shlex
 import subprocess
+from pathlib import Path
 from typing import Dict, List, Optional
+
+
+def _resolve_vboxmanage_executable() -> Optional[str]:
+    """Resolve VBoxManage from PATH or the default Windows install locations."""
+    resolved = shutil.which("VBoxManage")
+    if resolved:
+        return resolved
+
+    candidates = [
+        r"C:\Program Files\Oracle\VirtualBox\VBoxManage.exe",
+        r"C:\Program Files\VirtualBox\VBoxManage.exe",
+    ]
+    for candidate in candidates:
+        if Path(candidate).exists():
+            return candidate
+    return None
 
 
 def _run_cmd(cmd: List[str]) -> Optional[str]:
     try:
+        executable = cmd[0]
+        if executable == "VBoxManage":
+            resolved = _resolve_vboxmanage_executable()
+            if resolved:
+                cmd = [resolved, *cmd[1:]]
         out = subprocess.check_output(cmd, stderr=subprocess.DEVNULL)
         return out.decode(errors="ignore")
     except Exception:
@@ -45,6 +68,10 @@ def detect_virtualbox() -> List[Dict]:
                 info["memory_mb"] = l.split("=", 1)[1].strip().strip('"')
             if l.startswith("cpus="):
                 info["vcpus"] = l.split("=", 1)[1].strip().strip('"')
+            if l.startswith("CfgFile="):
+                vm_path = l.split("=", 1)[1].strip().strip('"')
+                info["path"] = vm_path
+                info["vm_path"] = vm_path
         vms.append(info)
     return vms
 

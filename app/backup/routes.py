@@ -141,6 +141,16 @@ def create_step1():
 
         session.setdefault('backup_job', {})
         session['backup_job']['vm_ids'] = db_selected_ids
+        session['backup_job']['selected_vm_names'] = []
+
+        db_vm_names: List[str] = []
+        if db_selected_ids:
+            db_vms = VirtualMachine.query.filter(VirtualMachine.id.in_(db_selected_ids)).all()
+            db_vm_names = [vm.name for vm in db_vms if vm.name]
+
+        detected_vm_names = [vm.get('name') for vm in detected_selected if vm.get('name')]
+        session['backup_job']['selected_vm_names'] = db_vm_names + detected_vm_names
+
         # store detected VMs payload in session for later review (non-persistent)
         session['backup_job']['detected_vms'] = detected_selected
         _set_wizard_step(2)
@@ -302,6 +312,22 @@ def review():
     vm_ids = job.get('vm_ids', [])
     detected = job.get('detected_vms', [])
     selected_count = len(vm_ids) + len(detected)
+
+    selected_vm_names: List[str] = list(job.get('selected_vm_names', []) or [])
+    if not selected_vm_names:
+        for vm_id in vm_ids:
+            vm = VirtualMachine.query.get(vm_id)
+            if vm and vm.name:
+                selected_vm_names.append(vm.name)
+
+        for detected_vm in detected:
+            name = detected_vm.get('name')
+            if name:
+                selected_vm_names.append(name)
+
+    if not selected_vm_names and selected_count:
+        selected_vm_names = [f'VM ID {vm_id}' for vm_id in vm_ids]
+
     destination = job.get('destination', {}).get('path') or current_app.config.get('BACKUP_FOLDER', 'Not set')
     compression = job.get('compression') or 'Not set'
     encryption = job.get('encryption', {}).get('type') if job.get('encryption') else None
@@ -311,6 +337,7 @@ def review():
         'backup/review.html',
         title='Review Backup',
         selected_vms_count=selected_count,
+        selected_vm_names=selected_vm_names,
         selected_destination=destination,
         selected_compression=(compression if compression else 'Not set'),
         selected_encryption=(encryption if encryption else 'Disabled'),
@@ -357,6 +384,9 @@ def start_backup():
     vm_ids = job.get('vm_ids', [])[:]  # DB VM ids
     detected = job.get('detected_vms', [])[:]  # detected payloads
     destination = job.get('destination', {})
+
+    if not vm_ids and not detected:
+        return jsonify({'error': 'No virtual machine selected for backup.'}), 400
 
     created = []
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')

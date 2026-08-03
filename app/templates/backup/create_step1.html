@@ -47,7 +47,7 @@
                 </div>
                 <div>
                     <div class="text-xs text-slate-500 uppercase font-semibold">Selected</div>
-                    <div class="text-lg font-bold text-slate-900">0</div>
+                    <div id="selected-vm-count" class="text-lg font-bold text-slate-900">0</div>
                 </div>
             </div>
             <div class="p-4 rounded-xl border bg-slate-50 flex items-center gap-4">
@@ -112,5 +112,27 @@
     </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const selectedVmCount = document.getElementById('selected-vm-count');
+        const vmCheckboxes = document.querySelectorAll('input[name="vms"]');
+
+        function refreshSelectedVmCount() {
+            if (!selectedVmCount) {
+                return;
+            }
+
+            const count = Array.from(vmCheckboxes).filter((checkbox) => checkbox.checked).length;
+            selectedVmCount.textContent = String(count);
+        }
+
+        vmCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', refreshSelectedVmCount);
+        });
+
+        refreshSelectedVmCount();
+    });
+</script>
 
 {% endblock %}

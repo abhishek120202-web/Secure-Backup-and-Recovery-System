@@ -25,9 +25,20 @@
                     Configuration Summary
                 </h3>
                 <div class="bg-surface-container-low border border-outline-variant rounded-lg p-md space-y-md">
-                    <div class="flex justify-between items-center pb-sm border-b border-outline-variant">
-                        <span class="text-secondary text-body-md">Selected VMs</span>
-                        <span class="text-on-surface font-bold font-code-sm">{{ selected_vms_count or 0 }} (N/A Total)</span>
+                    <div class="pb-sm border-b border-outline-variant">
+                        <div class="flex justify-between items-start gap-4">
+                            <span class="text-secondary text-body-md">Selected VMs</span>
+                            <span class="text-on-surface font-bold font-code-sm">{{ selected_vms_count or 0 }} (N/A Total)</span>
+                        </div>
+                        {% if selected_vm_names %}
+                        <div class="mt-2 text-sm text-on-surface">
+                            {% for vm_name in selected_vm_names %}
+                                <div class="rounded border border-outline-variant bg-surface-container-highest px-2 py-1 mb-1">{{ vm_name }}</div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="mt-2 text-sm text-secondary">No VMs selected yet.</div>
+                        {% endif %}
                     </div>
                     <div class="flex justify-between items-center pb-sm border-b border-outline-variant">
                         <span class="text-secondary text-body-md">Target Location</span>

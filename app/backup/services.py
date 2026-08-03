@@ -67,6 +67,9 @@ class BackupService:
             db.session.commit()
             return False
 
+        if source_path.is_file() and source_path.suffix.lower() in {'.vbox', '.vmx', '.ovf', '.ova'}:
+            source_path = source_path.parent
+
         if source_path.is_file():
             copy_entries = [(source_path, False)]
         else:
